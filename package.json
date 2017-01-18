@@ -1,5 +1,5 @@
 {
-  "name": "x2node-query",
+  "name": "x2node-queries",
   "version": "1.0.0",
   "description": "SQL query builder.",
   "main": "index.js",
@@ -9,14 +9,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/boylesoftware/x2node-query.git"
+    "url": "git+https://github.com/boylesoftware/x2node-queries.git"
   },
   "author": "Lev Himmelfarb <lev@boylesoftware.com>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/boylesoftware/x2node-query/issues"
+    "url": "https://github.com/boylesoftware/x2node-queries/issues"
   },
-  "homepage": "https://github.com/boylesoftware/x2node-query#readme",
+  "homepage": "https://github.com/boylesoftware/x2node-queries#readme",
   "dependencies": {
     "x2node-common": "^1.0.0",
     "x2node-rsparser": "^1.0.0"

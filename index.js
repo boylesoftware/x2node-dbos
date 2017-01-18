@@ -1,7 +1,7 @@
 /**
  * Database query builder module.
  *
- * @module x2node-query
+ * @module x2node-queries
  */
 'use strict';
 
@@ -29,7 +29,7 @@ const DRIVERS = {
  * {@link https://www.npmjs.com/package/mysql} and compatible others) and
  * "pg" (for {@link https://www.npmjs.com/package/pg}). Additional drivers can be
  * registered using {@link registerDriver} function before creating the factory.
- * @returns {module:x2node-query~QueryFactory} Query factory instance.
+ * @returns {module:x2node-queries~QueryFactory} Query factory instance.
  * @throws {module:x2node-common.X2UsageError} If the provided driver name is
  * invalid.
  */
@@ -50,7 +50,7 @@ exports.createQueryFactory = function(dbDriverName) {
  * factory instance can be created using the driver.
  *
  * @param {string} dbDriverName Database driver name.
- * @param {module:x2node-query.DBDriver} dbDriver Driver implementation.
+ * @param {module:x2node-queries.DBDriver} dbDriver Driver implementation.
  */
 exports.registerDriver = function(dbDriverName, dbDriver) {
 
