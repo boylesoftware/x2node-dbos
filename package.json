@@ -18,8 +18,9 @@
   },
   "homepage": "https://github.com/boylesoftware/x2node-queries#readme",
   "dependencies": {
-    "x2node-common": "^1.0.0",
-    "x2node-rsparser": "^1.0.0"
+    "x2node-common": "~1.0.0",
+    "x2node-records": "~1.1.0",
+    "x2node-rsparser": "~1.1.0"
   },
   "engines": {
     "node": ">=4.3.2"
