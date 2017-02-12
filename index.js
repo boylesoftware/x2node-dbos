@@ -56,3 +56,6 @@ exports.registerDriver = function(dbDriverName, dbDriver) {
 
 	DRIVERS[dbDriverName] = dbDriver;
 };
+
+// export basic DB driver to allow extending
+exports.BasicDBDriver = require('./lib/driver/basic-driver.js');
