@@ -8,6 +8,7 @@
 const common = require('x2node-common');
 
 const QueryFactory = require('./lib/query-factory.js');
+const placeholders = require('./lib/placeholders.js');
 
 
 /**
@@ -59,3 +60,9 @@ exports.registerDriver = function(dbDriverName, dbDriver) {
 
 // export basic DB driver to allow extending
 exports.BasicDBDriver = require('./lib/driver/basic-driver.js');
+
+// export placeholders functions
+exports.param = placeholders.param;
+exports.isParam = placeholders.isParam;
+exports.expr = placeholders.expr;
+exports.isExpr = placeholders.isExpr;
