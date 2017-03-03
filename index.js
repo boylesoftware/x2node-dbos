@@ -66,3 +66,88 @@ exports.param = placeholders.param;
 exports.isParam = placeholders.isParam;
 exports.expr = placeholders.expr;
 exports.isExpr = placeholders.isExpr;
+
+// record types library extension:
+
+const SUPERTYPE_NAME = Symbol('superRecordTypeName');
+
+exports.extendRecordTypesLibrary = function(ctx, recordTypes) {
+
+	// tag the library
+	placeholders.tag(recordTypes);
+
+	// return it
+	return recordTypes;
+};
+
+exports.extendPropertiesContainer = function(ctx, container) {
+
+	// create supertype for record type descriptor
+	if ((container.nestedPath.length === 0) &&
+		!container.definition[SUPERTYPE_NAME]) {
+
+		// set the super type name symbol on the descriptor
+		const recordTypeName = container.recordTypeName;
+		const superTypeName = Symbol('$' + recordTypeName);
+		container[SUPERTYPE_NAME] = superTypeName;
+		Object.defineProperty(container, 'superRecordTypeName', {
+			get() { return this[SUPERTYPE_NAME]; }
+		});
+
+		// create the super type after the library is complete
+		ctx.onLibraryComplete(recordTypes => {
+
+			// base supertype definition
+			const superTypeDef = {
+				[SUPERTYPE_NAME]: superTypeName,
+				properties: {
+					'recordTypeName': {
+						valueType: 'string',
+						role: 'id',
+						valueExpr: '\'' + recordTypeName + '\''
+					},
+					'records': {
+						valueType: '[ref(' + recordTypeName + ')]',
+						optional: false
+					},
+					'count': {
+						valueType: 'number',
+						aggregate: {
+							collection: 'records',
+							valueExpr: 'id => count'
+						}
+					}
+				}
+			};
+
+			// complete the supertype definition with super-properties
+			const recordTypeDesc = recordTypes.getRecordTypeDesc(recordTypeName);
+			const recordTypeDef = recordTypeDesc.definition;
+			for (let superPropName in recordTypeDef.superProperties) {
+				const superPropDef = recordTypeDef.superProperties[
+					superPropName];
+				if (superTypeDef.properties[superPropName])
+					throw new common.X2UsageError(
+						'Invalid record type ' + recordTypeName +
+							' definition: super property name "' +
+							superPropName + '" is reserved.');
+				const superTypePropDef = Object.create(superPropDef);
+				superTypeDef.properties[superPropName] = superTypePropDef;
+			}
+
+			// add the type
+			ctx.addRecordType(superTypeName, superTypeDef);
+		});
+	}
+
+	// return the container
+	return container;
+};
+
+exports.extendPropertyDescriptor = function(ctx, propDesc) {
+
+	//...
+
+	// return the descriptor
+	return propDesc;
+};
