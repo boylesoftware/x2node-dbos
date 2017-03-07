@@ -406,7 +406,7 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 				}
 			}
 
-			// set up aggregte map key
+			// set up aggregate map key
 			if (propDesc.isMap()) {
 				if (!propDesc.keyPropertyName)
 					throw invalidPropDef(
