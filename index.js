@@ -113,12 +113,12 @@ exports.extendPropertiesContainer = function(ctx, container) {
 				properties: {
 					'recordTypeName': {
 						valueType: 'string',
-						role: 'id',
-						valueExpr: '\'' + recordTypeName + '\''
+						role: 'id'
 					},
 					'records': {
 						valueType: '[ref(' + recordTypeName + ')]',
-						optional: false
+						optional: false,
+						implicitDependentRef: true
 					},
 					'count': {
 						valueType: 'number',
@@ -143,6 +143,8 @@ exports.extendPropertiesContainer = function(ctx, container) {
 							superPropName + '" is reserved.');
 				const superTypePropDef = Object.create(superPropDef);
 				superTypeDef.properties[superPropName] = superTypePropDef;
+				// TODO: validate: must be aggregate of records or nested, or
+				// view of records
 			}
 
 			// add the type
@@ -223,12 +225,13 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 	// get property definition
 	const propDef = propDesc.definition;
 
-	// check if super-property
-	const superProp = propDesc.container.definition.superRecordType;
+	// implicit dependent reference flag
+	if (propDesc.isRef())
+		propDesc._implicitDependentRef = propDef.implicitDependentRef;
 
 	// check if stored property
 	if (!propDef.valueExpr && !propDef.aggregate &&
-		!propDef.reverseRefProperty) {
+		!propDef.reverseRefProperty && !propDef.implicitDependentRef) {
 
 		// check if nested object
 		if (propDesc.scalarValueType === 'object') {
@@ -248,7 +251,7 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 		// get table and parent id column
 		propDesc._table = propDef.table;
 		propDesc._parentIdColumn = propDef.parentIdColumn;
-		if (!superProp) ctx.onLibraryValidation(recordTypes => {
+		ctx.onLibraryValidation(recordTypes => {
 
 			// must have a table if collection
 			if (!propDesc.isScalar() && !propDesc.table)
@@ -263,7 +266,7 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 	}
 
 	// validate id property
-	if (propDesc.isId() && !superProp) {
+	if (propDesc.isId()) {
 		ctx.onLibraryValidation(recordTypes => {
 			if (propDesc.isCalculated())
 				throw invalidPropDef(
@@ -558,6 +561,9 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 
 	// add properties and methods to the descriptor:
 
+	Object.defineProperty(propDesc, 'implicitDependentRef', {
+		get() { return this._implicitDependentRef; }
+	});
 	Object.defineProperty(propDesc, 'fetchByDefault', {
 		get() { return this._fetchByDefault; }
 	});
