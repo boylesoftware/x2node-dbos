@@ -6,6 +6,7 @@
 'use strict';
 
 const common = require('x2node-common');
+const rsparser = require('x2node-rsparser');
 
 const QueryFactory = require('./lib/query-factory.js');
 const placeholders = require('./lib/placeholders.js');
@@ -14,6 +15,10 @@ const ValueExpression = require('./lib/value-expression.js');
 const filterBuilder = require('./lib/filter-builder.js');
 const orderBuilder = require('./lib/order-builder.js');
 
+
+/////////////////////////////////////////////////////////////////////////////////
+// Module
+/////////////////////////////////////////////////////////////////////////////////
 
 /**
  * The drivers registry.
@@ -71,12 +76,36 @@ exports.isParam = placeholders.isParam;
 exports.expr = placeholders.expr;
 exports.isExpr = placeholders.isExpr;
 
-// record types library extension:
+/**
+ * Tell if the provided object is supported by the module. Currently, only a
+ * record types library instance can be tested using this function and it tells
+ * if the library was constructed with the queries extension.
+ *
+ * @param {*} obj Object to test.
+ * @returns {boolean} <code>true</code> if supported by the queries module.
+ */
+exports.isSupported = function(obj) {
+
+	return placeholders.isTagged(obj);
+};
+
+
+/////////////////////////////////////////////////////////////////////////////////
+// Record Types Library Extension
+/////////////////////////////////////////////////////////////////////////////////
 
 // extend record types library
 exports.extendRecordTypesLibrary = function(ctx, recordTypes) {
 
+	// check if extended by the result set parser
+	if (!rsparser.isSupported(recordTypes))
+		throw new common.X2UsageError(
+			'The library must be extended by the rsparser module first.');
+
 	// tag the library
+	if (placeholders.isTagged(recordTypes))
+		throw new common.X2UsageError(
+			'The library is already extended by the queries module.');
 	placeholders.tag(recordTypes);
 
 	// return it
@@ -116,7 +145,7 @@ exports.extendPropertiesContainer = function(ctx, container) {
 						role: 'id'
 					},
 					'records': {
-						valueType: '[ref(' + recordTypeName + ')]',
+						valueType: 'ref(' + recordTypeName + ')[]',
 						optional: false,
 						implicitDependentRef: true
 					},
