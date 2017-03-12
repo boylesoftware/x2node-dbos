@@ -239,13 +239,8 @@ function invalidPropDef(propDesc, msg) {
 // extend property descriptors
 exports.extendPropertyDescriptor = function(ctx, propDesc) {
 
-	// polymorphs are not supported yet
-	if (propDesc.isPolymorph())
-		throw new common.X2UsageError(
-			'Polymorphic properties are not supported yet.');
-
 	// add value expression context
-	ctx.onLibraryComplete(recordTypes => {
+	ctx.onLibraryComplete(() => {
 		propDesc._valueExprContext = new ValueExpressionContext(
 			propDesc.container.nestedPath + propDesc.name,
 			propDesc.containerChain.concat(propDesc.nestedProperties));
@@ -280,7 +275,7 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 		// get table and parent id column
 		propDesc._table = propDef.table;
 		propDesc._parentIdColumn = propDef.parentIdColumn;
-		ctx.onLibraryValidation(recordTypes => {
+		ctx.onLibraryValidation(() => {
 
 			// must have a table if collection
 			if (!propDesc.isScalar() && !propDesc.table)
@@ -296,7 +291,7 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 
 	// validate id property
 	if (propDesc.isId()) {
-		ctx.onLibraryValidation(recordTypes => {
+		ctx.onLibraryValidation(() => {
 			if (propDesc.isCalculated())
 				throw invalidPropDef(
 					propDesc, 'id property may not be calculated.');
@@ -329,8 +324,8 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 			const revRefPropDesc = refTarget.getPropertyDesc(
 				propDesc.reverseRefPropertyName);
 			if (!revRefPropDesc.isRef() || !revRefPropDesc.isScalar() ||
-				revRefPropDesc.isPolymorph() || revRefPropDesc.isCalculated() ||
-				revRefPropDesc.reverseRefPropertyName || revRefPropDesc.table ||
+				revRefPropDesc.isCalculated() ||
+				revRefPropDesc.reverseRefPropertyName || /*TODO revRefPropDesc.table ||*/
 				(revRefPropDesc.refTarget !== propDesc.container.recordTypeName))
 				throw invalidPropDef(
 					propDesc, 'reverse reference property does not match the' +
@@ -352,7 +347,7 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 
 		// compile the property value expression
 		propDesc._valueExpr = true; // mark as calculated right away
-		ctx.onLibraryComplete(recordTypes => {
+		ctx.onLibraryComplete(() => {
 			try {
 				propDesc._valueExpr = new ValueExpression(
 					new ValueExpressionContext(
@@ -404,9 +399,10 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 		ctx.onLibraryComplete(recordTypes => {
 
 			// build value expression context based on the aggregated collection
-			const valueExprCtx = (new ValueExpressionContext(
-				propDesc.container.nestedPath, propDesc.containerChain))
-				  .getRelativeContext(aggColPath);
+			const valueExprCtx = (
+				new ValueExpressionContext(
+					propDesc.container.nestedPath, propDesc.containerChain)
+			).getRelativeContext(aggColPath);
 
 			// save the aggregated property path
 			propDesc._aggregatedPropPath = valueExprCtx.basePath;
@@ -450,9 +446,8 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 							' no such property.');
 				const keyPropDesc = container.getPropertyDesc(
 					propDesc.keyPropertyName);
-				if (!keyPropDesc.isScalar() || keyPropDesc.isPolymorph() ||
-					keyPropDesc.isCalculated() || keyPropDesc.table ||
-					keyPropDesc.reverseRefPropertyName ||
+				if (!keyPropDesc.isScalar() || keyPropDesc.isCalculated() ||
+					keyPropDesc.table || keyPropDesc.reverseRefPropertyName ||
 					(keyPropDesc.scalarValueType === 'object'))
 					throw invalidPropDef(
 						propDesc, 'key property ' + propDesc.keyPropertyName +
@@ -477,7 +472,7 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 		}
 
 		// validate the map key
-		ctx.onLibraryValidation(recordTypes => {
+		ctx.onLibraryValidation(() => {
 
 			// must have key column or property
 			if (!propDesc.keyPropertyName && !propDesc.keyColumn)
@@ -524,7 +519,7 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 	} else if ( // check if the presence test is required
 		propDesc.isScalar() && (propDesc.scalarValueType === 'object') &&
 			propDesc.optional && !propDef.table) {
-		ctx.onLibraryValidation(recordTypes => {
+		ctx.onLibraryValidation(() => {
 			if (!propDesc.presenceTest)
 				throw invalidPropDef(
 					propDesc, 'optional scalar object property stored in the' +
@@ -566,7 +561,7 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 					' properties.');
 
 		// parse the order
-		ctx.onLibraryComplete(recordTypes => {
+		ctx.onLibraryComplete(() => {
 			try {
 				propDesc._order = orderBuilder.buildOrder(
 					propDesc.valueExprContext, propDef.order);
@@ -580,7 +575,7 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 	}
 
 	// determine fetch by default flag
-	ctx.onLibraryComplete(recordTypes => {
+	ctx.onLibraryComplete(() => {
 		propDesc._fetchByDefault = ((
 			(propDef.fetchByDefault === undefined) &&
 				!propDesc.isView() &&
