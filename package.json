@@ -4,7 +4,7 @@
   "description": "SQL query builder.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "eslint .",
     "postversion": "git push"
   },
   "repository": {
@@ -17,12 +17,15 @@
     "url": "https://github.com/boylesoftware/x2node-queries/issues"
   },
   "homepage": "https://github.com/boylesoftware/x2node-queries#readme",
+  "engines": {
+    "node": ">=4.3.2"
+  },
   "dependencies": {
     "x2node-common": "^1.1.0",
     "x2node-records": "^2.0.0",
     "x2node-rsparser": "^2.0.0"
   },
-  "engines": {
-    "node": ">=4.3.2"
+  "devDependencies": {
+    "eslint": "^3.17.1"
   }
 }
