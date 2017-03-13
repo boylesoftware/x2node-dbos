@@ -239,6 +239,11 @@ function invalidPropDef(propDesc, msg) {
 // extend property descriptors
 exports.extendPropertyDescriptor = function(ctx, propDesc) {
 
+	// restrict property name
+	if (!(/^[a-z_$][a-z_$0-9]*$/i).test(propDesc.name))
+		throw invalidPropDef(
+			propDesc, 'illegal characters in the property name.');
+
 	// add value expression context
 	ctx.onLibraryComplete(() => {
 		propDesc._valueExprContext = new ValueExpressionContext(
