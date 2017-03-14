@@ -1,7 +1,7 @@
 /**
  * Database operations module.
  *
- * @module x2node-queries
+ * @module x2node-dbos
  */
 'use strict';
 
@@ -24,7 +24,7 @@ const orderBuilder = require('./lib/order-builder.js');
  * The drivers registry.
  *
  * @private
- * @type {Object.<string,module:x2node-queries.DBDriver>}
+ * @type {Object.<string,module:x2node-dbos.DBDriver>}
  */
 const DRIVERS = {
 	'mysql': new (require('./lib/driver/mysql-driver.js'))(),
@@ -43,8 +43,8 @@ const DRIVERS = {
  * registered using {@link registerDriver} function before creating the factory.
  * @param {module:x2node-records~RecordTypesLibrary} recordTypes Record types
  * library. The factory builds operations against this library. The library must
- * be extended with the <code>x2node-queries</code> module.
- * @returns {module:x2node-queries~DBOFactory} DBO factory instance.
+ * be extended with the <code>x2node-dbos</code> module.
+ * @returns {module:x2node-dbos~DBOFactory} DBO factory instance.
  * @throws {module:x2node-common.X2UsageError} If the provided driver name is
  * invalid.
  */
@@ -59,7 +59,7 @@ exports.createDBOFactory = function(dbDriverName, recordTypes) {
 	// make sure that the record types library is compatible
 	if (!placeholders.isTagged(recordTypes))
 		throw new common.X2UsageError(
-			'Record types library does not have the queries extension.');
+			'Record types library does not have the DBOs extension.');
 
 	// create and return the factory
 	return new DBOFactory(dbDriver, recordTypes);
@@ -70,7 +70,7 @@ exports.createDBOFactory = function(dbDriverName, recordTypes) {
  * instance that uses the driver can be created.
  *
  * @param {string} dbDriverName Database driver name.
- * @param {module:x2node-queries.DBDriver} dbDriver Driver implementation.
+ * @param {module:x2node-dbos.DBDriver} dbDriver Driver implementation.
  */
 exports.registerDriver = function(dbDriverName, dbDriver) {
 
@@ -89,10 +89,10 @@ exports.isExpr = placeholders.isExpr;
 /**
  * Tell if the provided object is supported by the module. Currently, only a
  * record types library instance can be tested using this function and it tells
- * if the library was constructed with the queries extension.
+ * if the library was constructed with the DBOs extension.
  *
  * @param {*} obj Object to test.
- * @returns {boolean} <code>true</code> if supported by the queries module.
+ * @returns {boolean} <code>true</code> if supported by the DBOs module.
  */
 exports.isSupported = function(obj) {
 
@@ -115,7 +115,7 @@ exports.extendRecordTypesLibrary = function(ctx, recordTypes) {
 	// tag the library
 	if (placeholders.isTagged(recordTypes))
 		throw new common.X2UsageError(
-			'The library is already extended by the queries module.');
+			'The library is already extended by the DBOs module.');
 	placeholders.tag(recordTypes);
 
 	// return it
@@ -123,11 +123,11 @@ exports.extendRecordTypesLibrary = function(ctx, recordTypes) {
 };
 
 /**
- * Queries module specific
+ * DBOs module specific
  * [RecordTypeDescriptor]{@link module:x2node-records~RecordTypeDescriptor}
  * extension.
  *
- * @mixin QueriesRecordTypeDescriptorExtension
+ * @mixin DBOsRecordTypeDescriptorExtension
  * @static
  */
 
@@ -199,7 +199,7 @@ exports.extendPropertiesContainer = function(ctx, container) {
 		/**
 		 * Super record type name.
 		 *
-		 * @member {Symbol} module:x2node-queries.QueriesRecordTypeDescriptorExtension#superRecordTypeName
+		 * @member {Symbol} module:x2node-dbos.DBOsRecordTypeDescriptorExtension#superRecordTypeName
 		 * @readonly
 		 */
 		Object.defineProperty(container, 'superRecordTypeName', {
@@ -209,7 +209,7 @@ exports.extendPropertiesContainer = function(ctx, container) {
 		/**
 		 * Top table used to store the record type's records.
 		 *
-		 * @member {Symbol} module:x2node-queries.QueriesRecordTypeDescriptorExtension#table
+		 * @member {Symbol} module:x2node-dbos.DBOsRecordTypeDescriptorExtension#table
 		 * @readonly
 		 */
 		Object.defineProperty(container, 'table', {
@@ -222,11 +222,11 @@ exports.extendPropertiesContainer = function(ctx, container) {
 };
 
 /**
- * Queries module specific
+ * DBOs module specific
  * [PropertyDescriptor]{@link module:x2node-records~PropertyDescriptor}
  * extension.
  *
- * @mixin QueriesPropertyDescriptorExtension
+ * @mixin DBOsPropertyDescriptorExtension
  * @static
  */
 
@@ -625,7 +625,7 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 	 * record reference property can only appear among the top record type
 	 * properties (not in a nested object).
 	 *
-	 * @member {string} module:x2node-queries.QueriesPropertyDescriptorExtension#reverseRefPropertyName
+	 * @member {string} module:x2node-dbos.DBOsPropertyDescriptorExtension#reverseRefPropertyName
 	 * @readonly
 	 */
 	Object.defineProperty(propDesc, 'reverseRefPropertyName', {
@@ -636,7 +636,7 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 	 * For a calculated value or aggregate property, the value expression. The
 	 *  expression is based at the record type.
 	 *
-	 * @member {module:x2node-queries~ValueExpression} module:x2node-queries.QueriesPropertyDescriptorExtension#valueExpr
+	 * @member {module:x2node-dbos~ValueExpression} module:x2node-dbos.DBOsPropertyDescriptorExtension#valueExpr
 	 * @readonly
 	 */
 	Object.defineProperty(propDesc, 'valueExpr', {
@@ -648,7 +648,7 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 	 * with a value expression and aggregate properties. If a property is
 	 * calculated, <code>valueExpr</code> descriptor property is also available.
 	 *
-	 * @function module:x2node-queries.QueriesPropertyDescriptorExtension#isAggregate
+	 * @function module:x2node-dbos.DBOsPropertyDescriptorExtension#isAggregate
 	 * @returns {boolean} <code>true</code> if aggregate property.
 	 */
 	propDesc.isCalculated = function() { return this._valueExpr; };
@@ -657,7 +657,7 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 	 * For an aggregate property, the aggregation function, which may be "COUNT",
 	 * "MAX", "MIN", "SUM" or "AVG".
 	 *
-	 * @member {string} module:x2node-queries.QueriesPropertyDescriptorExtension#aggregateFunc
+	 * @member {string} module:x2node-dbos.DBOsPropertyDescriptorExtension#aggregateFunc
 	 * @readonly
 	 */
 	Object.defineProperty(propDesc, 'aggregateFunc', {
@@ -669,7 +669,7 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 	 * <code>valueExpr</code>, <code>aggregatedPropPath</code> and
 	 * <code>aggregateFunc</code> descriptor properties are also available.
 	 *
-	 * @function module:x2node-queries.QueriesPropertyDescriptorExtension#isAggregate
+	 * @function module:x2node-dbos.DBOsPropertyDescriptorExtension#isAggregate
 	 * @returns {boolean} <code>true</code> if aggregate property.
 	 */
 	propDesc.isAggregate = function() { return this._aggregateFunc; };
@@ -678,7 +678,7 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 	 * For an aggregate property, path of the aggregated collection property
 	 * starting from the record type.
 	 *
-	 * @member {string} module:x2node-queries.QueriesPropertyDescriptorExtension#aggregatedPropPath
+	 * @member {string} module:x2node-dbos.DBOsPropertyDescriptorExtension#aggregatedPropPath
 	 * @readonly
 	 */
 	Object.defineProperty(propDesc, 'aggregatedPropPath', {

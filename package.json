@@ -1,7 +1,7 @@
 {
-  "name": "x2node-queries",
+  "name": "x2node-dbos",
   "version": "1.0.0",
-  "description": "SQL query builder.",
+  "description": "SQL database operations.",
   "main": "index.js",
   "scripts": {
     "test": "eslint .",
@@ -9,14 +9,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/boylesoftware/x2node-queries.git"
+    "url": "git+https://github.com/boylesoftware/x2node-dbos.git"
   },
   "author": "Lev Himmelfarb <lev@boylesoftware.com>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/boylesoftware/x2node-queries/issues"
+    "url": "https://github.com/boylesoftware/x2node-dbos/issues"
   },
-  "homepage": "https://github.com/boylesoftware/x2node-queries#readme",
+  "homepage": "https://github.com/boylesoftware/x2node-dbos#readme",
   "engines": {
     "node": ">=4.3.2"
   },
