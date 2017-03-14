@@ -1,5 +1,5 @@
 /**
- * Database query builder module.
+ * Database operations module.
  *
  * @module x2node-queries
  */
@@ -8,7 +8,7 @@
 const common = require('x2node-common');
 const rsparser = require('x2node-rsparser');
 
-const QueryFactory = require('./lib/query-factory.js');
+const DBOFactory = require('./lib/dbo-factory.js');
 const placeholders = require('./lib/placeholders.js');
 const ValueExpressionContext = require('./lib/value-expression-context.js');
 const ValueExpression = require('./lib/value-expression.js');
@@ -24,6 +24,7 @@ const orderBuilder = require('./lib/order-builder.js');
  * The drivers registry.
  *
  * @private
+ * @type {Object.<string,module:x2node-queries.DBDriver>}
  */
 const DRIVERS = {
 	'mysql': new (require('./lib/driver/mysql-driver.js'))(),
@@ -31,19 +32,23 @@ const DRIVERS = {
 };
 
 /**
- * Create new factory using the specified database driver. Once created, the
- * factory instance can be used by the application throughout its life cycle.
+ * Create new database operations (DBO) factory using the specified database
+ * driver and the record types library. Once created, the factory instance can be
+ * used by the application throughout its life cycle.
  *
  * @param {string} dbDriverName Database driver name. Out of the box, two drivers
  * are available: "mysql" (for
  * {@link https://www.npmjs.com/package/mysql} and compatible others) and
  * "pg" (for {@link https://www.npmjs.com/package/pg}). Additional drivers can be
  * registered using {@link registerDriver} function before creating the factory.
- * @returns {module:x2node-queries~QueryFactory} Query factory instance.
+ * @param {module:x2node-records~RecordTypesLibrary} recordTypes Record types
+ * library. The factory builds operations against this library. The library must
+ * be extended with the <code>x2node-queries</code> module.
+ * @returns {module:x2node-queries~DBOFactory} DBO factory instance.
  * @throws {module:x2node-common.X2UsageError} If the provided driver name is
  * invalid.
  */
-exports.createQueryFactory = function(dbDriverName) {
+exports.createDBOFactory = function(dbDriverName, recordTypes) {
 
 	// lookup the driver
 	const dbDriver = DRIVERS[dbDriverName];
@@ -51,13 +56,18 @@ exports.createQueryFactory = function(dbDriverName) {
 		throw new common.X2UsageError(
 			'Invalid database driver "' + dbDriverName + '".');
 
+	// make sure that the record types library is compatible
+	if (!placeholders.isTagged(recordTypes))
+		throw new common.X2UsageError(
+			'Record types library does not have the queries extension.');
+
 	// create and return the factory
-	return new QueryFactory(dbDriver);
+	return new DBOFactory(dbDriver, recordTypes);
 };
 
 /**
- * Register custom database driver. After the driver is registered, a query
- * factory instance can be created using the driver.
+ * Register custom database driver. After the driver is registered, a DBO factory
+ * instance that uses the driver can be created.
  *
  * @param {string} dbDriverName Database driver name.
  * @param {module:x2node-queries.DBDriver} dbDriver Driver implementation.
