@@ -2,6 +2,9 @@
  * Database operations module.
  *
  * @module x2node-dbos
+ * @requires module:x2node-common
+ * @requires module:x2node-records
+ * @requires module:x2node-rsparser
  */
 'use strict';
 
@@ -21,7 +24,7 @@ const orderBuilder = require('./lib/order-builder.js');
 /////////////////////////////////////////////////////////////////////////////////
 
 /**
- * The drivers registry.
+ * Database drivers registry.
  *
  * @private
  * @type {Object.<string,module:x2node-dbos.DBDriver>}
