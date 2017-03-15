@@ -5,6 +5,7 @@
  * @requires module:x2node-common
  * @requires module:x2node-records
  * @requires module:x2node-rsparser
+ * @implements {module:x2node-records.Extension}
  */
 'use strict';
 
@@ -107,19 +108,29 @@ exports.isSupported = function(obj) {
 // Record Types Library Extension
 /////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Default id strategy property on the library construction context.
+ */
+const DEFAULT_ID_STRAT = Symbol('DEFAULT_ID_STRAT');
+
 // extend record types library
 exports.extendRecordTypesLibrary = function(ctx, recordTypes) {
 
 	// check if extended by the result set parser
 	if (!rsparser.isSupported(recordTypes))
 		throw new common.X2UsageError(
-			'The library must be extended by the rsparser module first.');
+			'The library must be extended by the RSParser module first.');
 
 	// tag the library
 	if (placeholders.isTagged(recordTypes))
 		throw new common.X2UsageError(
 			'The library is already extended by the DBOs module.');
 	placeholders.tag(recordTypes);
+
+	// save default id strategy on the context
+	ctx[DEFAULT_ID_STRAT] = (
+		recordTypes.definition.defaultIdStrategy || 'generated'
+	);
 
 	// return it
 	return recordTypes;
@@ -130,7 +141,7 @@ exports.extendRecordTypesLibrary = function(ctx, recordTypes) {
  * [RecordTypeDescriptor]{@link module:x2node-records~RecordTypeDescriptor}
  * extension.
  *
- * @mixin DBOsRecordTypeDescriptorExtension
+ * @mixin RecordTypeDescriptorWithDBOs
  * @static
  */
 
@@ -155,7 +166,8 @@ exports.extendPropertiesContainer = function(ctx, container) {
 				properties: {
 					'recordTypeName': {
 						valueType: 'string',
-						role: 'id'
+						role: 'id',
+						idStrategy: 'assigned'
 					},
 					'records': {
 						valueType: 'ref(' + recordTypeName + ')[]',
@@ -202,7 +214,7 @@ exports.extendPropertiesContainer = function(ctx, container) {
 		/**
 		 * Super record type name.
 		 *
-		 * @member {Symbol} module:x2node-dbos.DBOsRecordTypeDescriptorExtension#superRecordTypeName
+		 * @member {Symbol} module:x2node-dbos.RecordTypeDescriptorWithDBOs#superRecordTypeName
 		 * @readonly
 		 */
 		Object.defineProperty(container, 'superRecordTypeName', {
@@ -212,7 +224,7 @@ exports.extendPropertiesContainer = function(ctx, container) {
 		/**
 		 * Top table used to store the record type's records.
 		 *
-		 * @member {Symbol} module:x2node-dbos.DBOsRecordTypeDescriptorExtension#table
+		 * @member {string} module:x2node-dbos.RecordTypeDescriptorWithDBOs#table
 		 * @readonly
 		 */
 		Object.defineProperty(container, 'table', {
@@ -229,7 +241,7 @@ exports.extendPropertiesContainer = function(ctx, container) {
  * [PropertyDescriptor]{@link module:x2node-records~PropertyDescriptor}
  * extension.
  *
- * @mixin DBOsPropertyDescriptorExtension
+ * @mixin PropertyDescriptorWithDBOs
  * @static
  */
 
@@ -307,8 +319,13 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 		});
 	}
 
-	// validate id property
+	// check if id property
 	if (propDesc.isId()) {
+
+		// determine id strategy
+		propDesc._idStrategy = (propDef.idStrategy || ctx[DEFAULT_ID_STRAT]);
+
+		// validate id property
 		ctx.onLibraryValidation(() => {
 			if (propDesc.isCalculated())
 				throw invalidPropDef(
@@ -603,21 +620,86 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 
 	// add properties and methods to the descriptor:
 
+	/**
+	 * Indicates if the reference property's target can be linked to the parent
+	 * without a join. This is a special case used, for example, for the
+	 * <code>records</code> property in the super-type.
+	 *
+	 * @protected
+	 * @member {boolean} module:x2node-dbos.PropertyDescriptorWithDBOs#implicitDependentRef
+	 * @readonly
+	 */
 	Object.defineProperty(propDesc, 'implicitDependentRef', {
 		get() { return this._implicitDependentRef; }
 	});
+
+	/**
+	 * <code>true</code> if the property is fetched by default (included in the
+	 * fetch operation result with addressed with a wildcard pattern).
+	 *
+	 * @member {boolean} module:x2node-dbos.PropertyDescriptorWithDBOs#fetchByDefault
+	 * @readonly
+	 */
 	Object.defineProperty(propDesc, 'fetchByDefault', {
 		get() { return this._fetchByDefault; }
 	});
+
+	/**
+	 * Name of the database column used to store the property value, or
+	 * <code>undefined</code> if the property is calculated or a dependent
+	 * rereference.
+	 *
+	 * @member {string=} module:x2node-dbos.PropertyDescriptorWithDBOs#column
+	 * @readonly
+	 */
 	Object.defineProperty(propDesc, 'column', {
 		get() { return this._column; }
 	});
+
+	/**
+	 * Name of the database table used to store the property value, or
+	 * <code>undefined</code> if the property is calculated, a dependent
+	 * rereference or stored in the main record table.
+	 *
+	 * @member {string=} module:x2node-dbos.PropertyDescriptorWithDBOs#table
+	 * @readonly
+	 */
 	Object.defineProperty(propDesc, 'table', {
 		get() { return this._table; }
 	});
+
+	/**
+	 * If <code>table</code> property is present, this is the name of the column
+	 * in that table that points back to the main record table.
+	 *
+	 * @member {string=} module:x2node-dbos.PropertyDescriptorWithDBOs#parentIdColumn
+	 * @readonly
+	 */
 	Object.defineProperty(propDesc, 'parentIdColumn', {
 		get() { return this._parentIdColumn; }
 	});
+
+	/**
+	 * For an id property, the strategy that determines how the id values are
+	 * handled for new records. If "generated", the ids are assumed to be
+	 * automatically generated by the database. If "assigned", the application is
+	 * expected to assign the ids to the records before saving them in the
+	 * database.
+	 *
+	 * @member {string=} module:x2node-dbos.PropertyDescriptorWithDBOs#idStrategy
+	 * @readonly
+	 */
+	Object.defineProperty(propDesc, 'idStrategy', {
+		get() { return this._idStrategy; }
+	});
+
+	/**
+	 * For a map property that does not utilize <code>keyPropertyName</code>, the
+	 * name of the database column that contains the map entry keys.
+	 *
+	 * @member {string=} module:x2node-dbos.PropertyDescriptorWithDBOs#keyColumn
+	 * @readonly
+	 */
 	Object.defineProperty(propDesc, 'keyColumn', {
 		get() { return this._keyColumn; }
 	});
@@ -628,7 +710,7 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 	 * record reference property can only appear among the top record type
 	 * properties (not in a nested object).
 	 *
-	 * @member {string} module:x2node-dbos.DBOsPropertyDescriptorExtension#reverseRefPropertyName
+	 * @member {string=} module:x2node-dbos.PropertyDescriptorWithDBOs#reverseRefPropertyName
 	 * @readonly
 	 */
 	Object.defineProperty(propDesc, 'reverseRefPropertyName', {
@@ -639,7 +721,8 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 	 * For a calculated value or aggregate property, the value expression. The
 	 *  expression is based at the record type.
 	 *
-	 * @member {module:x2node-dbos~ValueExpression} module:x2node-dbos.DBOsPropertyDescriptorExtension#valueExpr
+	 * @protected
+	 * @member {module:x2node-dbos~ValueExpression=} module:x2node-dbos.PropertyDescriptorWithDBOs#valueExpr
 	 * @readonly
 	 */
 	Object.defineProperty(propDesc, 'valueExpr', {
@@ -648,19 +731,21 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 
 	/**
 	 * Tell if this is a calculated value property, which includes properties
-	 * with a value expression and aggregate properties. If a property is
-	 * calculated, <code>valueExpr</code> descriptor property is also available.
+	 * with a <code>valueExpr</code> attribute in the definition and aggregate
+	 * properties.
 	 *
-	 * @function module:x2node-dbos.DBOsPropertyDescriptorExtension#isAggregate
+	 * @function module:x2node-dbos.PropertyDescriptorWithDBOs#isAggregate
 	 * @returns {boolean} <code>true</code> if aggregate property.
 	 */
-	propDesc.isCalculated = function() { return this._valueExpr; };
+	propDesc.isCalculated = function() {
+		return (this._valueExpr !== undefined);
+	};
 
 	/**
 	 * For an aggregate property, the aggregation function, which may be "COUNT",
 	 * "MAX", "MIN", "SUM" or "AVG".
 	 *
-	 * @member {string} module:x2node-dbos.DBOsPropertyDescriptorExtension#aggregateFunc
+	 * @member {string=} module:x2node-dbos.PropertyDescriptorWithDBOs#aggregateFunc
 	 * @readonly
 	 */
 	Object.defineProperty(propDesc, 'aggregateFunc', {
@@ -669,33 +754,88 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 
 	/**
 	 * Tell if this is an aggregate property. If a property is an aggregate,
-	 * <code>valueExpr</code>, <code>aggregatedPropPath</code> and
-	 * <code>aggregateFunc</code> descriptor properties are also available.
+	 * <code>isCalculated()</code> also returns <code>true</code> and
+	 * <code>aggregatedPropPath</code> and <code>aggregateFunc</code> descriptor
+	 * properties are made available as well.
 	 *
-	 * @function module:x2node-dbos.DBOsPropertyDescriptorExtension#isAggregate
+	 * @function module:x2node-dbos.PropertyDescriptorWithDBOs#isAggregate
 	 * @returns {boolean} <code>true</code> if aggregate property.
 	 */
-	propDesc.isAggregate = function() { return this._aggregateFunc; };
+	propDesc.isAggregate = function() {
+		return (this._aggregateFunc !== undefined);
+	};
 
 	/**
 	 * For an aggregate property, path of the aggregated collection property
 	 * starting from the record type.
 	 *
-	 * @member {string} module:x2node-dbos.DBOsPropertyDescriptorExtension#aggregatedPropPath
+	 * @member {string=} module:x2node-dbos.PropertyDescriptorWithDBOs#aggregatedPropPath
 	 * @readonly
 	 */
 	Object.defineProperty(propDesc, 'aggregatedPropPath', {
 		get() { return this._aggregatedPropPath; }
 	});
+
+	/**
+	 * Tell if filtered collection view property.
+	 *
+	 * @function module:x2node-dbos.PropertyDescriptorWithDBOs#isFiltered
+	 * @returns {boolean} <code>true</code> if filtered property.
+	 */
+	propDesc.isFiltered = function() {
+		return (this._filter !== undefined);
+	};
+
+	/**
+	 * For a filtered collection view property, this is the filter.
+	 *
+	 * @protected
+	 * @member {module:x2node-dbos~RecordsFilter=} module:x2node-dbos.PropertyDescriptorWithDBOs#filter
+	 * @readonly
+	 */
 	Object.defineProperty(propDesc, 'filter', {
 		get() { return this._filter; }
 	});
+
+	/**
+	 * For a optional scalar nested object property, this is the presence test.
+	 *
+	 * @protected
+	 * @member {module:x2node-dbos~RecordsFilter=} module:x2node-dbos.PropertyDescriptorWithDBOs#presenceTest
+	 * @readonly
+	 */
 	Object.defineProperty(propDesc, 'presenceTest', {
 		get() { return this._presenceTest; }
 	});
+
+	/**
+	 * Tell if ordered collection property.
+	 *
+	 * @function module:x2node-dbos.PropertyDescriptorWithDBOs#isOrdered
+	 * @returns {boolean} <code>true</code> if ordered property.
+	 */
+	propDesc.isOrdered = function() {
+		return (this._order !== undefined);
+	};
+
+	/**
+	 * For an ordered collection property, this is the order specification.
+	 *
+	 * @protected
+	 * @member {module:x2node-dbos~RecordsOrder=} module:x2node-dbos.PropertyDescriptorWithDBOs#order
+	 * @readonly
+	 */
 	Object.defineProperty(propDesc, 'order', {
 		get() { return this._order; }
 	});
+
+	/**
+	 * Value expression context for value expressions based at this property.
+	 *
+	 * @protected
+	 * @member {module:x2node-dbos~ValueExpressionContext} module:x2node-dbos.PropertyDescriptorWithDBOs#valueExprContext
+	 * @readonly
+	 */
 	Object.defineProperty(propDesc, 'valueExprContext', {
 		get() { return this._valueExprContext; }
 	});
