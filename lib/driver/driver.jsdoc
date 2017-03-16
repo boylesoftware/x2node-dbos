@@ -138,6 +138,31 @@
  * non-<code>NULL</code>.
  */
 /**
+ * Construct a SQL <code>DELETE</code> statement that can have a
+ * <code>WHERE</code> clause that uses columns from other joined tables. Note,
+ * that the statement still deletes rows only from a single table.
+ *
+ * @function module:x2node-dbos.DBDriver#buildDeleteWithJoins
+ * @param {string} fromTableName Name of the table, from which to delete.
+ * @param {string} fromTableAlias Alias for the <code>fromTableName</code> used
+ * in the join conditions and the <code>WHERE</code> clause.
+ * @param {Array.<Object>} [refTables] Array of descriptors of reference tables
+ * joined to the <code>fromTableName</code> and used in the <code>WHERE</code>
+ * clause.
+ * @param {string} [refTables.tableName] Reference table name.
+ * @param {string} [refTables.tableAlias] Reference table alias used in the join
+ * condition and the <code>WHERE</code> clause.
+ * @param {string} [refTables.joinCondition] Boolean SQL expression for the
+ * reference table join condition.
+ * @param {string} [filterExpr] Boolean SQL expression for the <code>WHERE</code>
+ * clause. The expression may use <code>fromTableAlias</code> and aliases of the
+ * reference tables to refer to the corresponding tables.
+ * @param {boolean} [filterExprNeedsParen] <code>true</code> indicates that if
+ * the <code>filterExpr</code> is included in a logical conjunction (the "AND"
+ * Boolean operation), it needs to be enclosed in parenthesis.
+ * @returns {string} The resulting <code>DELETE</code> statement.
+ */
+/**
  * Start transaction on the specified database connection.
  *
  * @function module:x2node-dbos.DBDriver#startTransaction
