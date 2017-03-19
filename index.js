@@ -364,9 +364,19 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 				propDesc, 'only top record type properties can have' +
 					' reverseRefProperty attribute.');
 
-		// save it on the descriptor and validate
+		// save reverse reference info on the descriptor
 		propDesc._reverseRefPropertyName = propDef.reverseRefProperty;
+		propDesc._weakDependency = (propDef.weakDependency ? true : false);
+		if (!propDesc._weakDependency) {
+			if (!propDesc.container._dependentRecordTypes)
+				propDesc.container._dependentRecordTypes = new Set();
+			propDesc.container._dependentRecordTypes.add(propDesc.refTarget);
+		}
+
+		// validate reverse reference
 		ctx.onLibraryValidation(recordTypes => {
+
+			// validate reverse reference property in the referred record type
 			const refTarget = recordTypes.getRecordTypeDesc(propDesc.refTarget);
 			if (!refTarget.hasProperty(propDesc.reverseRefPropertyName))
 				throw invalidPropDef(
@@ -378,11 +388,29 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 				propDesc.reverseRefPropertyName);
 			if (!revRefPropDesc.isRef() || !revRefPropDesc.isScalar() ||
 				revRefPropDesc.isCalculated() ||
-				revRefPropDesc.reverseRefPropertyName || /*TODO revRefPropDesc.table ||*/
+				revRefPropDesc.reverseRefPropertyName ||
 				(revRefPropDesc.refTarget !== propDesc.container.recordTypeName))
 				throw invalidPropDef(
 					propDesc, 'reverse reference property does not match the' +
 						' property definition.');
+
+			// detect any cyclical strong dependencies
+			const seenRecordTypes = new Set();
+			const checkForCycles = (dependentRecordType) => {
+				seenRecordTypes.add(dependentRecordType.name);
+				const drt = dependentRecordType._dependentRecordTypes;
+				if (drt) for (let recordTypeName of drt) {
+					if (seenRecordTypes.has(recordTypeName))
+						throw invalidPropDef(
+							propDesc, 'Cyclical strong dependency between' +
+								' record types ' +
+								dependentRecordType.name + ' and ' +
+								recordTypeName + '.');
+					checkForCycles(
+						recordTypes.getRecordTypeDesc(recordTypeName));
+				}
+			};
+			checkForCycles(propDesc.container);
 		});
 	}
 
@@ -752,6 +780,22 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 	Object.defineProperty(propDesc, 'reverseRefPropertyName', {
 		get() { return this._reverseRefPropertyName; }
 	});
+
+	/**
+	 * For a dependent record reference property (one that has
+	 * <code>reverseRefPropertyName</code> descriptor property), tell if the
+	 * dependency is <em>weak</em>. A weak dependency means that when the
+	 * referring record is being deleted, no attempt is made to cascade the
+	 * deletion to the referred record(s). Strongly dependent records, on the
+	 * other hand, are automatically deleted when the referring record is deleted
+	 * (the deletion operation is cascaded over the strong dependencies).
+	 *
+	 * @function module:x2node-dbos.PropertyDescriptorWithDBOs#isWeakDependency
+	 * @returns {boolean} <code>true</code> if weak dependency.
+	 */
+	propDesc.isWeakDependency = function() {
+		return this._weakDependency;
+	};
 
 	/**
 	 * For a calculated value or aggregate property, the value expression. The

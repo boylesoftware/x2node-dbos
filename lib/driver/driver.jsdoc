@@ -157,8 +157,8 @@
  * @param {string} [filterExpr] Boolean SQL expression for the <code>WHERE</code>
  * clause. The expression may use <code>fromTableAlias</code> and aliases of the
  * reference tables to refer to the corresponding tables.
- * @param {boolean} [filterExprNeedsParen] <code>true</code> indicates that if
- * the <code>filterExpr</code> is included in a logical conjunction (the "AND"
+ * @param {boolean} [filterExprParen] <code>true</code> indicates that if the
+ * <code>filterExpr</code> is included in a logical conjunction (the "AND"
  * Boolean operation), it needs to be enclosed in parenthesis.
  * @returns {string} The resulting <code>DELETE</code> statement.
  */
@@ -196,9 +196,10 @@
  * failure. The function receives a single argument with the error object.
  */
 /**
- * Execute specified statement on the specified database connection.
+ * Execute specified statement on the specified database connection. The
+ * statement may be returning a result set.
  *
- * @function module:x2node-dbos.DBDriver#execute
+ * @function module:x2node-dbos.DBDriver#executeQuery
  * @param {*} connection Driver-specific database connection object.
  * @param {string} statement The statement to execute.
  * @param {Object} handler The operation result handler.
@@ -215,6 +216,20 @@
  * function gets a single argument, which, depending on the driver, can be an
  * array of values, one for each column, or an object with column names as the
  * keys and the corresponding values as the values.
+ */
+/**
+ * Execute specified statement on the specified database connection. The
+ * statement is intended to modify data (such as <code>UPDATE</code> and
+ * <code>DELETE</code> statements).
+ *
+ * @function module:x2node-dbos.DBDriver#executeUpdate
+ * @param {*} connection Driver-specific database connection object.
+ * @param {string} statement The statement to execute.
+ * @param {Object} handler The operation result handler.
+ * @param {function} handler.onSuccess Fucntion that gets called upon operation
+ * success. The function gets the number of affected rows as its only argument.
+ * @param {function} handler.onError Fucntion that gets called upon operation
+ * failure. The function receives a single argument with the error object.
  */
 /**
  * Execute specified <code>INSERT</code> statement.
