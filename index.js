@@ -150,6 +150,23 @@ exports.extendPropertiesContainer = function(ctx, container) {
 	if ((container.nestedPath.length === 0) &&
 		!container.definition.superRecordType) {
 
+		// find record meta-info properties
+		container._recordMetaInfoPropNames = {};
+		ctx.onContainerComplete(container => {
+			container.allPropertyNames.forEach(propName => {
+				const propDesc = container.getPropertyDesc(propName);
+				if (propDesc.isRecordMetaInfo()) {
+					const role = propDesc.recordMetaInfoRole;
+					if (container._recordMetaInfoPropNames[role] !== undefined)
+						throw new common.X2UsageError(
+							'Record type ' + String(container.recordTypeName) +
+								' has more than one ' + role +
+								' record meta-info property.');
+					container._recordMetaInfoPropNames[role] = propName;
+				}
+			});
+		});
+
 		// set the super type name symbol on the descriptor
 		const recordTypeName = container.recordTypeName;
 		const superTypeName = Symbol('$' + recordTypeName);
@@ -165,7 +182,7 @@ exports.extendPropertiesContainer = function(ctx, container) {
 					'recordTypeName': {
 						valueType: 'string',
 						role: 'id',
-						generator: 'assigned'
+						generator: null
 					},
 					'records': {
 						valueType: 'ref(' + recordTypeName + ')[]',
@@ -228,6 +245,20 @@ exports.extendPropertiesContainer = function(ctx, container) {
 		Object.defineProperty(container, 'table', {
 			get() { return this._table; }
 		});
+
+		/**
+		 * Get name of the property for the specified record meta-info role.
+		 *
+		 * @function module:x2node-dbos.RecordTypeDescriptorWithDBOs#getRecordMetaInfoPropName
+		 * @param {string} role Record meta-info role: "version",
+		 * "creationTimestamp", "creationActor", "modificationTimestamp" or
+		 * "modificationActor".
+		 * @returns {string} The property name, or <code>undefined</code> if
+		 * none.
+		 */
+		container.getRecordMetaInfoPropName = function(role) {
+			return this._recordMetaInfoPropNames[role];
+		};
 	}
 
 	// return the container
@@ -259,6 +290,18 @@ function invalidPropDef(propDesc, msg) {
 			' has invalid definition: ' + msg);
 }
 
+/**
+ * Record meta-info property roles.
+ *
+ * @private
+ * @type {Set.<string>}
+ */
+const RECORD_METAINFO_ROLES = new Set([
+	'version',
+	'creationTimestamp', 'creationActor',
+	'modificationTimestamp', 'modificationActor'
+]);
+
 // extend property descriptors
 exports.extendPropertyDescriptor = function(ctx, propDesc) {
 
@@ -274,22 +317,49 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 			propDesc.containerChain.concat(propDesc.nestedProperties));
 	});
 
+	// process property definition:
+
 	// get property definition
 	const propDef = propDesc.definition;
 
 	// implicit dependent reference flag
-	if (propDesc.isRef())
-		propDesc._implicitDependentRef = propDef.implicitDependentRef;
+	propDesc._implicitDependentRef = false;
+	if (propDef.implicitDependentRef) {
 
-	// check if stored property
+		// validate the definition
+		if (!propDesc.isRef() || propDef.reverseRefProperty)
+			throw invalidPropDef(
+				propDesc, 'only a reference may be marked as'+
+					' implicitDependentRef and it may not combine with' +
+					' reverseRefProperty attribute.');
+
+		// store the flag on the descriptor
+		propDesc._implicitDependentRef = true;
+	}
+
+	// get generator
+	if (propDef.generator !== undefined) {
+
+		// store the generator on the descriptor
+		propDesc._generator = propDef.generator;
+
+	} else if (propDesc.isId()) { // default generator for id property
+		propDesc._generator = ctx[DEFAULT_IDGEN];
+	}
+
+	// check if record meta-info property
+	if (RECORD_METAINFO_ROLES.has(propDef.role))
+		propDesc._recordMetaInfoRole = propDef.role;
+
+	// get stored property parameters
 	if (!propDef.valueExpr && !propDef.aggregate &&
 		!propDef.reverseRefProperty && !propDef.implicitDependentRef) {
 
 		// check if nested object
 		if (propDesc.scalarValueType === 'object') {
 
-			// validate the definition
-			if (propDesc.column)
+			// may not have column attribute
+			if (propDef.column)
 				throw invalidPropDef(
 					propDesc, 'nested object property may not have a column' +
 						' attribute.');
@@ -303,65 +373,32 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 		// get table and parent id column
 		propDesc._table = propDef.table;
 		propDesc._parentIdColumn = propDef.parentIdColumn;
-		ctx.onLibraryValidation(() => {
 
-			// must have a table if collection
-			if (!propDesc.isScalar() && !propDesc.table)
-				throw invalidPropDef(
-					propDesc, 'must be stored in a separate table.');
+		// set default modifiability
+		propDesc._modifiable = (
+			!propDesc.isId() && !propDesc._recordMetaInfoRole);
 
-			// must have parent id column if has table
-			if (propDesc.table && !propDesc.parentIdColumn)
-				throw invalidPropDef(
-					propDesc, 'missing parentIdColumn attribute.');
-		});
+	} else {
+
+		// may not have explicit modifiability
+		if (propDef.modifiable)
+			throw invalidPropDef(propDesc, 'may not be modifiable.');
+
+		// set default modifiability
+		propDesc._modifiable = false;
 	}
 
-	// check if has generator
-	if (propDef.generator &&
-		(propDesc.isId() || (propDef.generator !== 'assigned'))) {
-		propDesc._generator = propDef.generator;
-		ctx.onLibraryValidation(() => {
-			if (!propDesc.isScalar() || propDesc.isCalculated() ||
-				(propDesc.scalarValueType === 'object') || propDesc.isRef())
-				throw invalidPropDef(
-					propDesc, 'this type of property may not be generated.');
-		});
-	}
+	// set explicit modifiability
+	if (propDef.modifiable !== undefined)
+		propDesc._modifiable = propDef.modifiable;
 
-	// check if id property
-	if (propDesc.isId()) {
-
-		// set default id generator if not explicitely set
-		if (!propDesc._generator)
-			propDesc._generator = ctx[DEFAULT_IDGEN];
-
-		// validate id property
-		ctx.onLibraryValidation(() => {
-			if (propDesc.isCalculated())
-				throw invalidPropDef(
-					propDesc, 'id property may not be calculated.');
-		});
-	}
-
-	// validate generator
-	if (propDesc._generator && (propDesc._generator !== 'auto') &&
-		(propDesc._generator !== 'assigned') &&
-		((typeof propDesc._generator) !== 'function'))
-		throw invalidPropDef(
-			propDesc, 'generator can only be "auto", "assigned" or a function.');
-
-		// check if has reverse reference
+	// check if dependent reference
 	if (propDef.reverseRefProperty) {
 
 		// validate the definition
-		if (!propDesc.isRef() || propDef.table || propDef.column)
+		if (!propDesc.isRef())
 			throw invalidPropDef(
-				propDesc, 'non-reference or stored property may not have' +
-					' reverseRefProperty attribute.');
-		if (!propDesc.container.isRecordType())
-			throw invalidPropDef(
-				propDesc, 'only top record type properties can have' +
+				propDesc, 'non-reference property may not have' +
 					' reverseRefProperty attribute.');
 
 		// save reverse reference info on the descriptor
@@ -372,59 +409,16 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 				propDesc.container._dependentRecordTypes = new Set();
 			propDesc.container._dependentRecordTypes.add(propDesc.refTarget);
 		}
-
-		// validate reverse reference
-		ctx.onLibraryValidation(recordTypes => {
-
-			// validate reverse reference property in the referred record type
-			const refTarget = recordTypes.getRecordTypeDesc(propDesc.refTarget);
-			if (!refTarget.hasProperty(propDesc.reverseRefPropertyName))
-				throw invalidPropDef(
-					propDesc, 'reverse reference property ' +
-						propDesc.reverseRefPropertyName +
-						' does not exist in the reference target record type ' +
-						propDesc.refTarget + '.');
-			const revRefPropDesc = refTarget.getPropertyDesc(
-				propDesc.reverseRefPropertyName);
-			if (!revRefPropDesc.isRef() || !revRefPropDesc.isScalar() ||
-				revRefPropDesc.isCalculated() ||
-				revRefPropDesc.reverseRefPropertyName ||
-				(revRefPropDesc.refTarget !== propDesc.container.recordTypeName))
-				throw invalidPropDef(
-					propDesc, 'reverse reference property does not match the' +
-						' property definition.');
-
-			// detect any cyclical strong dependencies
-			const seenRecordTypes = new Set();
-			const checkForCycles = (dependentRecordType) => {
-				seenRecordTypes.add(dependentRecordType.name);
-				const drt = dependentRecordType._dependentRecordTypes;
-				if (drt) for (let recordTypeName of drt) {
-					if (seenRecordTypes.has(recordTypeName))
-						throw invalidPropDef(
-							propDesc, 'Cyclical strong dependency between' +
-								' record types ' +
-								dependentRecordType.name + ' and ' +
-								recordTypeName + '.');
-					checkForCycles(
-						recordTypes.getRecordTypeDesc(recordTypeName));
-				}
-			};
-			checkForCycles(propDesc.container);
-		});
 	}
 
 	// check if calculated value property
 	if (propDef.valueExpr) {
 
 		// validate property definition
-		if (propDef.aggregate || propDef.table || propDef.column ||
-			propDef.presenceTest || propDef.order || propDef.filter ||
-			propDef.reverseRefProperty || !propDesc.isScalar() ||
-			(propDesc.scalarValueType === 'object'))
+		if (propDef.aggregate || !propDesc.isScalar())
 			throw invalidPropDef(
-				propDesc, 'conflicting calculated value property definition' +
-					' attributes or invalid property value type or role.');
+				propDesc, 'calculated property may not be aggregate or' +
+					' non-scalar.');
 
 		// compile the property value expression
 		propDesc._valueExpr = true; // mark as calculated right away
@@ -449,14 +443,9 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 	if (propDef.aggregate) {
 
 		// validate property definition
-		if (propDef.table || propDef.column ||
-			propDef.presenceTest || propDef.order || propDef.filter ||
-			propDef.reverseRefProperty ||
-			(!propDesc.isScalar() && !propDesc.isMap()) ||
-			(propDesc.scalarValueType === 'object'))
+		if (propDesc.isArray())
 			throw invalidPropDef(
-				propDesc, 'conflicting aggregate property definition' +
-					' attributes or invalid property value type or role.');
+				propDesc, 'aggregate property may not be an array.');
 
 		// check if has needed attributes
 		const aggColPath = propDef.aggregate.collection;
@@ -551,25 +540,6 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 						' keyColumn attriutes.');
 			propDesc._keyColumn = propDef.keyColumn;
 		}
-
-		// validate the map key
-		ctx.onLibraryValidation(() => {
-
-			// must have key column or property
-			if (!propDesc.keyPropertyName && !propDesc.keyColumn)
-				throw invalidPropDef(propDesc, 'missing keyColumn attribute.');
-
-			// validate key property
-			if (propDesc.keyPropertyName) {
-				const keyPropDesc = propDesc.nestedProperties.getPropertyDesc(
-					propDesc.keyPropertyName);
-				if (keyPropDesc.isCalculated() || keyPropDesc.table ||
-					keyPropDesc.reverseRefPropertyName)
-					throw invalidPropDef(
-						propDesc, 'key property may not be calculated, stored' +
-							' in its own table or have a reverse reference.');
-			}
-		});
 	}
 
 	// check if has a presense test
@@ -595,16 +565,6 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 						propDesc, 'invalid presence test: ' + err.message);
 				throw err;
 			}
-		});
-
-	} else if ( // check if the presence test is required
-		propDesc.isScalar() && (propDesc.scalarValueType === 'object') &&
-			propDesc.optional && !propDef.table) {
-		ctx.onLibraryValidation(() => {
-			if (!propDesc.presenceTest)
-				throw invalidPropDef(
-					propDesc, 'optional scalar object property stored in the' +
-						' parent record\'s table must have a presence test.');
 		});
 	}
 
@@ -662,6 +622,197 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 				!propDesc.isView() &&
 				!propDesc.isCalculated()
 		) || propDef.fetchByDefault);
+	});
+
+	// overall property descriptor validation:
+
+	// final property descriptor validation
+	ctx.onLibraryValidation(recordTypes => {
+
+		// validate stored property
+		if (!propDesc.isCalculated() && !propDesc.reverseRefPropertyName &&
+			!propDesc.implicitDependentRef) {
+
+			// must have a table if collection
+			if (!propDesc.isScalar() && !propDesc.table)
+				throw invalidPropDef(
+					propDesc, 'must be stored in a separate table.');
+
+			// must have parent id column if has table
+			if (propDesc.table && !propDesc.parentIdColumn)
+				throw invalidPropDef(
+					propDesc, 'missing parentIdColumn attribute.');
+
+			// validate column
+			if (propDesc.scalarValueType === 'object') {
+				if (propDesc.column)
+					throw invalidPropDef(
+						propDesc, 'nested object property may not be stored in' +
+							' a column.');
+			} else {
+				if (!propDesc.column)
+					throw invalidPropDef(
+						propDesc, 'stored property must have a column.');
+			}
+		}
+
+		// validate generated property
+		if (propDesc.isGenerated()) {
+
+			// validate property type
+			if (!propDesc.isScalar() || propDesc.isCalculated() ||
+				(propDesc.scalarValueType === 'object') || propDesc.isRef())
+				throw invalidPropDef(
+					propDesc, 'generated property may not be calculated,' +
+						' non-scalar, nested object or reference.');
+
+			// validate generator
+			const generator = propDesc.generator;
+			if ((generator !== 'auto') && ((typeof generator) !== 'function'))
+				throw invalidPropDef(
+					propDesc, 'generator may only be "auto" or a function.');
+		}
+
+		// validate id property
+		if (propDesc.isId()) {
+
+			// validate property type
+			if (propDesc.isCalculated() || propDesc.isModifiable() ||
+				propDesc.table)
+				throw invalidPropDef(
+					propDesc, 'id property may not be calculated, modifiable,' +
+						' or stored in its own table.');
+		}
+
+		// validate meta-info property
+		if (propDesc.isRecordMetaInfo()) {
+
+			// validate property type
+			if (propDesc.isCalculated() || propDesc.table ||
+				!propDesc.container.isRecordType() || !propDesc.isScalar() ||
+				propDesc.isGenerated() || propDesc.isModifiable())
+				throw invalidPropDef(
+					propDesc, 'record meta-info property may not be' +
+						' calculated, generated, non-scalar, modifiable,' +
+						' stored in its own table or belong to a nested' +
+						' object.');
+
+			// validate property value type
+			switch (propDesc.recordMetaInfoRole) {
+			case 'version':
+				if (propDesc.scalarValueType !== 'number')
+					throw invalidPropDef(
+						propDesc, 'record version may only be a number.');
+				break;
+			case 'creationTimestamp':
+			case 'modificationTimestamp':
+				if (propDesc.scalarValueType !== 'datetime')
+					throw invalidPropDef(
+						propDesc, 'record creation/modification timestamp may' +
+							' only be a datetime.');
+				break;
+			case 'creationActor':
+			case 'modificationActor':
+				if ((propDesc.scalarValueType !== 'string') &&
+					(propDesc.scalarValueType !== 'number'))
+					throw invalidPropDef(
+						propDesc, 'record creation/modification actor may only' +
+							' be a string or a number.');
+			}
+		}
+
+		// validate calculated property
+		if (propDesc.isCalculated()) {
+
+			// validate property type
+			if (propDesc.table || propDesc.column || propDesc.isModifiable() ||
+				(propDesc.scalarValueType === 'object') ||
+				propDesc.presenceTest ||
+				(!propDesc.isAggregate() && propDesc.isFiltered()) ||
+				propDesc.isOrdered())
+				throw invalidPropDef(
+					propDesc, 'calculated property may not be modifiable,' +
+						' stored in a table/column, be a nested object, have a' +
+						' presence test or be filtered or ordered.');
+		}
+
+		// validate dependent reference property
+		if (propDesc.reverseRefPropertyName) {
+
+			// validate property type
+			if (propDesc.table || propDesc.column || propDesc.isModifiable() ||
+				propDesc.isCalculated() || !propDesc.container.isRecordType())
+				throw invalidPropDef(
+					propDesc, 'dependent reference property may not be' +
+						' modifiable, calculated, stored in a table/column' +
+						' or belong to a nested object.');
+
+			// validate reverse reference property in the referred record type
+			const refTarget = recordTypes.getRecordTypeDesc(propDesc.refTarget);
+			if (!refTarget.hasProperty(propDesc.reverseRefPropertyName))
+				throw invalidPropDef(
+					propDesc, 'reverse reference property ' +
+						propDesc.reverseRefPropertyName +
+						' does not exist in the reference target record type ' +
+						propDesc.refTarget + '.');
+			const revRefPropDesc = refTarget.getPropertyDesc(
+				propDesc.reverseRefPropertyName);
+			if (!revRefPropDesc.isRef() || !revRefPropDesc.isScalar() ||
+				revRefPropDesc.isCalculated() ||
+				revRefPropDesc.reverseRefPropertyName ||
+				(revRefPropDesc.refTarget !== propDesc.container.recordTypeName))
+				throw invalidPropDef(
+					propDesc, 'reverse reference property does not match the' +
+						' property definition.');
+
+			// detect any cyclical strong dependencies
+			const seenRecordTypes = new Set();
+			const checkForCycles = (dependentRecordType) => {
+				seenRecordTypes.add(dependentRecordType.name);
+				const drt = dependentRecordType._dependentRecordTypes;
+				if (drt) for (let recordTypeName of drt) {
+					if (seenRecordTypes.has(recordTypeName))
+						throw invalidPropDef(
+							propDesc, 'cyclical strong dependency between' +
+								' record types ' +
+								dependentRecordType.name + ' and ' +
+								recordTypeName + '.');
+					checkForCycles(
+						recordTypes.getRecordTypeDesc(recordTypeName));
+				}
+			};
+			checkForCycles(propDesc.container);
+		}
+
+		// validate non-aggregate map property key
+		if (propDesc.isMap() && !propDesc.isAggregate()) {
+
+			// must have key column or property
+			if (!propDesc.keyPropertyName && !propDesc.keyColumn)
+				throw invalidPropDef(propDesc, 'missing keyColumn attribute.');
+
+			// validate key property
+			if (propDesc.keyPropertyName) {
+				const keyPropDesc = propDesc.nestedProperties.getPropertyDesc(
+					propDesc.keyPropertyName);
+				if (keyPropDesc.isCalculated() || keyPropDesc.table ||
+					keyPropDesc.reverseRefPropertyName)
+					throw invalidPropDef(
+						propDesc, 'key property may not be calculated, stored' +
+							' in its own table or have a reverse reference.');
+			}
+		}
+
+		// check if presence test is required
+		if (propDesc.isScalar() && (propDesc.scalarValueType === 'object') &&
+			propDesc.optional && !propDef.table) {
+
+			// validate presence test
+			if (!propDesc.presenceTest)
+				throw invalidPropDef(
+					propDesc, 'optional scalar object property stored in the' +
+						' parent record\'s table must have a presence test.');
+		}
 	});
 
 	// add properties and methods to the descriptor:
@@ -726,6 +877,40 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 	});
 
 	/**
+	 * Tell if the property is a record meta-info property, in which case the
+	 * <code>recordMetaInfoRole</code> descrpitor property exposes the role.
+	 *
+	 * @function module:x2node-dbos.PropertyDescriptorWithDBOs#isRecordMetaInfo
+	 * @returns {boolean} <code>true</code> if record meta-info property.
+	 */
+	propDesc.isRecordMetaInfo = function() {
+		return (this._recordMetaInfoRole !== undefined);
+	};
+
+	/**
+	 * For a record meta-info property this is the property role, which can be
+	 * one of the following: "version", "creationTimestamp", "creationActor",
+	 * "modificationTimestamp" or "modificationActor".
+	 *
+	 * @member {string=} module:x2node-dbos.PropertyDescriptorWithDBOs#recordMetaInfoRole
+	 * @readonly
+	 */
+	Object.defineProperty(propDesc, 'recordMetaInfoRole', {
+		get() { return this._recordMetaInfoRole; }
+	});
+
+	/**
+	 * For a stored property, tell if the property value is modifiable. Any
+	 * calculated, id or record meta-info property is reported as non-modifiable.
+	 *
+	 * @function module:x2node-dbos.PropertyDescriptorWithDBOs#isModifiable
+	 * @returns {boolean} <code>true</code> if modifiable property.
+	 */
+	propDesc.isModifiable = function() {
+		return this._modifiable;
+	};
+
+	/**
 	 * Tell if the property value is generated for new records. If so,
 	 * <code>generator</code> descrpitor property has a value.
 	 *
@@ -733,22 +918,16 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 	 * @returns {boolean} <code>true</code> if generated property.
 	 */
 	propDesc.isGenerated = function() {
-		return (this._generator !== undefined);
+		return ((this._generator !== undefined) && (this._generator !== null));
 	};
 
 	/**
 	 * For a property, whose value is generated for new records, this is the
 	 * generator, which can be a string "auto" (for automatically generated by
-	 * the database), "assigned" (for assigned by the application before saving
-	 * the record) or a function that takes the database connection as its only
-	 * argument, and returns either the id value or a promise of it. The property
-	 * descriptor is made available to the generator function as
+	 * the database), or a function that takes the database connection as its
+	 * only argument, and returns either the id value or a promise of it. The
+	 * property descriptor is made available to the generator function as
 	 * <code>this</code>.
-	 *
-	 * <p>Note, that all id properties (<code>isId()</code> returns
-	 * <code>true</code>) have a generator. Also, if a property is not an id,
-	 * "assigned" generator is ignored even if explicitly specified in the
-	 * definition.
 	 *
 	 * @member {(string|function)=} module:x2node-dbos.PropertyDescriptorWithDBOs#generator
 	 * @readonly
