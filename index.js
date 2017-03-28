@@ -290,6 +290,45 @@ function invalidPropDef(propDesc, msg) {
 			' has invalid definition: ' + msg);
 }
 
+/*const PROPDESC_VALIDATORS = [
+	{
+		description: 'implicit dependent reference property',
+		selector: {
+			implicitDependentRef: true
+		},
+		requirements: [
+			{
+				description: 'must be a reference',
+				test: {
+					isRef: true
+				}
+			},
+			{
+				description: 'may not be stored in table/column',
+				test: {
+					column: undefined,
+					table: undefined
+				}
+			}
+		]
+	},
+	{
+		selector: {
+			isCalculated: false,
+			reverseRefPropertyName: undefined,
+			implicitDependentRef: false
+		},
+		requirements: [
+			{
+				descriptior: 'must be stored in a column',
+				test: {
+					column: not(undefined)
+				}
+			}
+		]
+	}
+];*/
+
 /**
  * Record meta-info property roles.
  *
@@ -376,7 +415,8 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 
 		// set default modifiability
 		propDesc._modifiable = (
-			!propDesc.isId() && !propDesc._recordMetaInfoRole);
+			!propDesc.isView() && !propDesc.isId() &&
+				!propDesc._recordMetaInfoRole);
 
 	} else {
 
@@ -656,6 +696,15 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 			}
 		}
 
+		// validate a view property
+		if (propDesc.isView()) {
+
+			// may not be modifiable
+			if (propDesc.isModifiable())
+				throw invalidPropDef(
+					propDesc, 'view property may not be modifiable.');
+		}
+
 		// validate generated property
 		if (propDesc.isGenerated()) {
 
@@ -901,7 +950,10 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 
 	/**
 	 * For a stored property, tell if the property value is modifiable. Any
-	 * calculated, id or record meta-info property is reported as non-modifiable.
+	 * calculated, view, id or record meta-info property is reported as
+	 * non-modifiable. Note, that being not modifiable does not necessarily mean
+	 * unmutable. It merely means that setting a new value directly to the
+	 * property is disallowed.
 	 *
 	 * @function module:x2node-dbos.PropertyDescriptorWithDBOs#isModifiable
 	 * @returns {boolean} <code>true</code> if modifiable property.
