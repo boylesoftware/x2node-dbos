@@ -24,7 +24,7 @@
   "dependencies": {
     "x2node-common": "^1.2.0",
     "x2node-patch": "^1.0.0",
-    "x2node-records": "^2.0.0",
+    "x2node-records": "^2.1.0",
     "x2node-rsparser": "^2.1.0"
   },
   "devDependencies": {

@@ -414,10 +414,9 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 		propDesc._table = propDef.table;
 		propDesc._parentIdColumn = propDef.parentIdColumn;
 
-		// set default modifiability
-		propDesc._modifiable = (
-			!propDesc.isView() && !propDesc.isId() &&
-				!propDesc._recordMetaInfoRole);
+		// update default modifiability for meta-info properties
+		if (propDesc._recordMetaInfoRole && (propDef.modifiable === undefined))
+			propDesc._modifiable = false;
 
 	} else {
 
@@ -428,10 +427,6 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 		// set default modifiability
 		propDesc._modifiable = false;
 	}
-
-	// set explicit modifiability
-	if (propDef.modifiable !== undefined)
-		propDesc._modifiable = propDef.modifiable;
 
 	// check if dependent reference
 	if (propDef.reverseRefProperty) {
@@ -697,15 +692,6 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 			}
 		}
 
-		// validate a view property
-		if (propDesc.isView()) {
-
-			// may not be modifiable
-			if (propDesc.isModifiable())
-				throw invalidPropDef(
-					propDesc, 'view property may not be modifiable.');
-		}
-
 		// validate generated property
 		if (propDesc.isGenerated()) {
 
@@ -727,11 +713,10 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 		if (propDesc.isId()) {
 
 			// validate property type
-			if (propDesc.isCalculated() || propDesc.isModifiable() ||
-				propDesc.table)
+			if (propDesc.isCalculated() || propDesc.table)
 				throw invalidPropDef(
-					propDesc, 'id property may not be calculated, modifiable,' +
-						' or stored in its own table.');
+					propDesc, 'id property may not be calculated or stored in' +
+						' its own table.');
 		}
 
 		// validate meta-info property
@@ -948,20 +933,6 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 	Object.defineProperty(propDesc, 'recordMetaInfoRole', {
 		get() { return this._recordMetaInfoRole; }
 	});
-
-	/**
-	 * For a stored property, tell if the property value is modifiable. Any
-	 * calculated, view, id or record meta-info property is reported as
-	 * non-modifiable. Note, that being not modifiable does not necessarily mean
-	 * unmutable. It merely means that setting a new value directly to the
-	 * property is disallowed.
-	 *
-	 * @function module:x2node-dbos.PropertyDescriptorWithDBOs#isModifiable
-	 * @returns {boolean} <code>true</code> if modifiable property.
-	 */
-	propDesc.isModifiable = function() {
-		return this._modifiable;
-	};
 
 	/**
 	 * Tell if the property value is generated for new records. If so,
