@@ -137,7 +137,7 @@ describe('x2node-dbos', function() {
 				parentIdColumn: undefined,
 				isRecordMetaInfo: false,
 				recordMetaInfoRole: undefined,
-				isModifiable: false,
+				modifiable: false,
 				isGenerated: true,
 				generator: 'auto',
 				keyColumn: undefined,
@@ -176,7 +176,7 @@ describe('x2node-dbos', function() {
 			params.column = 'prop_ssspn';
 			params.isRecordMetaInfo = false;
 			params.recordMetaInfoRole = undefined;
-			params.isModifiable = true;
+			params.modifiable = true;
 			testPropDesc(recordTypeDesc, 'prop_ssspn', params);
 			params.column = 'prop_value';
 			testPropDesc(recordTypeDesc, 'prop_ssspc', params);

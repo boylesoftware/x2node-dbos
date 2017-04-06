@@ -725,7 +725,7 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 			// validate property type
 			if (propDesc.isCalculated() || propDesc.table ||
 				!propDesc.container.isRecordType() || !propDesc.isScalar() ||
-				propDesc.isGenerated() || propDesc.isModifiable())
+				propDesc.isGenerated() || propDesc.modifiable)
 				throw invalidPropDef(
 					propDesc, 'record meta-info property may not be' +
 						' calculated, generated, non-scalar, modifiable,' +
@@ -760,7 +760,7 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 		if (propDesc.isCalculated()) {
 
 			// validate property type
-			if (propDesc.table || propDesc.column || propDesc.isModifiable() ||
+			if (propDesc.table || propDesc.column || propDesc.modifiable ||
 				(propDesc.scalarValueType === 'object') ||
 				propDesc.presenceTest ||
 				(!propDesc.isAggregate() && propDesc.isFiltered()) ||
@@ -775,7 +775,7 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 		if (propDesc.reverseRefPropertyName) {
 
 			// validate property type
-			if (propDesc.table || propDesc.column || propDesc.isModifiable() ||
+			if (propDesc.table || propDesc.column || propDesc.modifiable ||
 				propDesc.isCalculated() || !propDesc.container.isRecordType())
 				throw invalidPropDef(
 					propDesc, 'dependent reference property may not be' +
