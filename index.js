@@ -144,6 +144,23 @@ exports.extendRecordTypesLibrary = function(ctx, recordTypes) {
  * @static
  */
 
+/**
+ * DBOs module specific
+ * [RecordTypeDescriptor]{@link module:x2node-records~PropertiesContainer}
+ * extension.
+ *
+ * @mixin PropertiesContainerWithDBOs
+ * @static
+ */
+
+/**
+ * Implicit dependent reference marker on a property definition.
+ *
+ * @private
+ * @constant {Symbol}
+ */
+const IMPLICIT_DEP_REF = Symbol('IMPLICIT_DEP_REF');
+
 // extend record type descriptors and property containers
 exports.extendPropertiesContainer = function(ctx, container) {
 
@@ -188,7 +205,7 @@ exports.extendPropertiesContainer = function(ctx, container) {
 					'records': {
 						valueType: 'ref(' + recordTypeName + ')[]',
 						optional: false,
-						implicitDependentRef: true
+						[IMPLICIT_DEP_REF]: true
 					},
 					'count': {
 						valueType: 'number',
@@ -261,6 +278,17 @@ exports.extendPropertiesContainer = function(ctx, container) {
 			return this._recordMetaInfoPropNames[role];
 		};
 	}
+
+	// complete polymorphic object container descriptor
+	ctx.onContainerComplete(container => {
+		if (container.isPolymorphObject() &&
+			((typeof container.definition.typeColumn) === 'string')) {
+			ctx.addHiddenProperty('$type', {
+				valueType: 'string',
+				column: container.definition.typeColumn
+			});
+		}
+	});
 
 	// return the container
 	return container;
@@ -364,13 +392,13 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 
 	// implicit dependent reference flag
 	propDesc._implicitDependentRef = false;
-	if (propDef.implicitDependentRef) {
+	if (propDef[IMPLICIT_DEP_REF]) {
 
 		// validate the definition
 		if (!propDesc.isRef() || propDef.reverseRefProperty)
 			throw invalidPropDef(
 				propDesc, 'only a reference may be marked as'+
-					' implicitDependentRef and it may not combine with' +
+					' implicit dependent ref and it may not combine with' +
 					' reverseRefProperty attribute.');
 
 		// store the flag on the descriptor
@@ -393,7 +421,7 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 
 	// get stored property parameters
 	if (!propDef.valueExpr && !propDef.aggregate &&
-		!propDef.reverseRefProperty && !propDef.implicitDependentRef) {
+		!propDef.reverseRefProperty && !propDef[IMPLICIT_DEP_REF]) {
 
 		// check if nested object
 		if (propDesc.scalarValueType === 'object') {
@@ -578,8 +606,21 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 		}
 	}
 
+	// add default presence test for polymorphic object subtype
+	let presenceTest = propDef.presenceTest;
+	if (propDesc.isSubtype() && (propDesc.scalarValueType === 'object') &&
+		!propDef.table && !presenceTest) {
+		if (!propDesc.container.definition.typeColumn)
+			throw invalidPropDef(
+				propDesc, 'no presence test and no typeColumn attribute on the' +
+					' polymorphic container.');
+		presenceTest = [
+			[ '^.$type => is', propDesc.name ]
+		];
+	}
+
 	// check if has a presense test
-	if (propDef.presenceTest) {
+	if (presenceTest) {
 
 		// validate property definition
 		if (!propDesc.isScalar() || (propDesc.scalarValueType !== 'object') ||
@@ -594,7 +635,7 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 			try {
 				propDesc._presenceTest = filterBuilder.buildFilter(
 					recordTypes, propDesc.valueExprContext,
-					[ ':and', propDef.presenceTest ]);
+					[ ':and', presenceTest ]);
 			} catch (err) {
 				if (err instanceof common.X2UsageError)
 					throw invalidPropDef(
