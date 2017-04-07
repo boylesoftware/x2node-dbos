@@ -4,7 +4,7 @@
  * @module x2node-dbos
  * @requires module:x2node-common
  * @requires module:x2node-records
- * @requires module:x2node-patch
+ * @requires module:x2node-patches
  * @requires module:x2node-rsparser
  * @implements {module:x2node-records.Extension}
  */
