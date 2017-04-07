@@ -285,7 +285,8 @@ exports.extendPropertiesContainer = function(ctx, container) {
 			((typeof container.definition.typeColumn) === 'string')) {
 			ctx.addHiddenProperty('$type', {
 				valueType: 'string',
-				column: container.definition.typeColumn
+				column: container.definition.typeColumn,
+				modifiable: false
 			});
 		}
 	});
@@ -414,6 +415,11 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 	} else if (propDesc.isId()) { // default generator for id property
 		propDesc._generator = ctx[DEFAULT_IDGEN];
 	}
+
+	// set id table-wide uniqueness
+	if (propDesc.isId())
+		propDesc._tableUnique = (
+			(propDef.tableUnique === undefined) || propDef.tableUnique);
 
 	// check if record meta-info property
 	if (RECORD_METAINFO_ROLES.has(propDef.role))
@@ -758,6 +764,11 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 				throw invalidPropDef(
 					propDesc, 'id property may not be calculated or stored in' +
 						' its own table.');
+
+			// validate top record id uniqueness
+			if (propDesc.container.isRecordType() && !propDesc.tableUnique)
+				throw invalidPropDef(
+					propDesc, 'top record id must be table-wide unique.');
 		}
 
 		// validate meta-info property
@@ -950,6 +961,17 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 	 */
 	Object.defineProperty(propDesc, 'parentIdColumn', {
 		get() { return this._parentIdColumn; }
+	});
+
+	/**
+	 * For an id property (<code>isId()</code> returns <code>true</code>), tells
+	 * if the id value is unique table-wide.
+	 *
+	 * @member {boolean=} module:x2node-dbos.PropertyDescriptorWithDBOs#tableUnique
+	 * @readonly
+	 */
+	Object.defineProperty(propDesc, 'tableUnique', {
+		get() { return this._tableUnique; }
 	});
 
 	/**
