@@ -5,12 +5,14 @@
  * @requires module:x2node-common
  * @requires module:x2node-records
  * @requires module:x2node-patches
+ * @requires module:x2node-validators
  * @requires module:x2node-rsparser
  * @implements {module:x2node-records.Extension}
  */
 'use strict';
 
 const common = require('x2node-common');
+const validators = require('x2node-validators');
 const rsparser = require('x2node-rsparser');
 
 const DBOFactory = require('./lib/dbo-factory.js');
@@ -114,6 +116,9 @@ exports.isSupported = function(obj) {
  */
 const DEFAULT_IDGEN = Symbol('DEFAULT_IDGEN');
 
+// requires rsparser extension
+exports.requiredExtensions = [ validators, rsparser ];
+
 // extend record types library
 exports.extendRecordTypesLibrary = function(ctx, recordTypes) {
 
@@ -161,12 +166,20 @@ exports.extendRecordTypesLibrary = function(ctx, recordTypes) {
  */
 const IMPLICIT_DEP_REF = Symbol('IMPLICIT_DEP_REF');
 
+/**
+ * Super record type definition marker.
+ *
+ * @private
+ * @constant {Symbol}
+ */
+const SUPER_RECORD_TYPE = Symbol('SUPER_RECORD_TYPE');
+
 // extend record type descriptors and property containers
 exports.extendPropertiesContainer = function(ctx, container) {
 
 	// process record type descriptor
 	if ((container.nestedPath.length === 0) &&
-		!container.definition.superRecordType) {
+		!container.definition[SUPER_RECORD_TYPE]) {
 
 		// find record meta-info properties
 		container._recordMetaInfoPropNames = {};
@@ -195,7 +208,7 @@ exports.extendPropertiesContainer = function(ctx, container) {
 
 			// base supertype definition
 			const superTypeDef = {
-				superRecordType: true,
+				[SUPER_RECORD_TYPE]: true,
 				properties: {
 					'recordTypeName': {
 						valueType: 'string',
@@ -706,6 +719,15 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 				!propDesc.isCalculated()
 		) || propDef.fetchByDefault);
 	});
+
+	// setup validation for non-stored and special role properties
+	if (!propDesc.isView()) {
+		if (propDesc._recordMetaInfoRole || propDesc._generator ||
+			propDesc._valueExpr || propDesc._reverseRefPropertyName)
+			validators.replaceDefaultValidators(propDesc, {
+				'onCreate': [ 'empty' ]
+			});
+	}
 
 	// overall property descriptor validation:
 
