@@ -4,6 +4,7 @@
  * @module x2node-dbos
  * @requires module:x2node-common
  * @requires module:x2node-records
+ * @requires module:x2node-pointers
  * @requires module:x2node-patches
  * @requires module:x2node-validators
  * @requires module:x2node-rsparser
@@ -295,12 +296,10 @@ exports.extendPropertiesContainer = function(ctx, container) {
 	// complete polymorphic object container descriptor
 	ctx.onContainerComplete(container => {
 		if (container.isPolymorphObject() &&
+			container.hasProperty(container.typePropertyName) &&
 			((typeof container.definition.typeColumn) === 'string')) {
-			ctx.addHiddenProperty('$type', {
-				valueType: 'string',
-				column: container.definition.typeColumn,
-				modifiable: false
-			});
+			container.getPropertyDesc(container.typePropertyName)._column =
+				container.definition.typeColumn;
 		}
 	});
 
@@ -440,7 +439,8 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 
 	// get stored property parameters
 	if (!propDef.valueExpr && !propDef.aggregate &&
-		!propDef.reverseRefProperty && !propDef[IMPLICIT_DEP_REF]) {
+		!propDef.reverseRefProperty && !propDef[IMPLICIT_DEP_REF] &&
+		!propDesc.isPolymorphObjectType()) {
 
 		// check if nested object
 		if (propDesc.scalarValueType === 'object') {
@@ -634,7 +634,10 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 				propDesc, 'no presence test and no typeColumn attribute on the' +
 					' polymorphic container.');
 		presenceTest = [
-			[ '^.$type => is', propDesc.name ]
+			[
+				'^.' + propDesc.container.typePropertyName + ' => is',
+				propDesc.name
+			]
 		];
 	}
 
