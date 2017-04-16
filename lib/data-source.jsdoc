@@ -1,0 +1,22 @@
+/**
+ * Interface for data sources that provide connections to the database.
+ *
+ * @interface DataSource
+ * @memberof module:x2node-dbos
+ */
+/**
+ * Get database connection.
+ *
+ * @function module:x2node-dbos.DataSource#getConnection
+ * @returns {Promise.<*>} Promise of a database specific connection object.
+ */
+/**
+ * Release database connection.
+ *
+ * @function module:x2node-dbos.DataSource#releaseConnection
+ * @param {*} connection Database specific connection object previously acquired
+ * using [getConnection()]{@link module:x2node-dbos.DataSource#getConnection}
+ * method.
+ * @param {external:Error} [err] Optional error object if the connection is being
+ * released after a database error.
+ */

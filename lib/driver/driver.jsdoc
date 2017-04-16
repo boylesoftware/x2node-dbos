@@ -192,6 +192,27 @@
  * @returns {string} The resulting <code>UPDATE</code> statement.
  */
 /**
+ * Acquire database connection.
+ *
+ * @function module:x2node-dbos.DBDriver#connect
+ * @param {*} source Driver-specific database connections source.
+ * @param {Object} handler Connection result handler.
+ * @param {function} handler.onSuccess Fucntion that gets called when the
+ * connection is acquired. The connection is passed to it as the only argument.
+ * @param {function} handler.onError Fucntion that gets called when connection
+ * could not be acquired. The error is passed to is as the only argument.
+ */
+/**
+ * Release database connection previously acquired using the
+ * [connect()]{@link module:x2node-dbos.DBDriver#connect} method.
+ *
+ * @function module:x2node-dbos.DBDriver#releaseConnection
+ * @param {*} source Driver-specific database connections source.
+ * @param {*} connection The connection to release.
+ * @param {external:Error} [err] Optional error object if the connection is being
+ * release after a database error.
+ */
+/**
  * Start transaction on the specified database connection.
  *
  * @function module:x2node-dbos.DBDriver#startTransaction

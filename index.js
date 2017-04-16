@@ -17,6 +17,7 @@ const validators = require('x2node-validators');
 const rsparser = require('x2node-rsparser');
 
 const DBOFactory = require('./lib/dbo-factory.js');
+const DBDriverDataSource = require('./lib/driver-data-source.js');
 const placeholders = require('./lib/placeholders.js');
 const ValueExpressionContext = require('./lib/value-expression-context.js');
 const ValueExpression = require('./lib/value-expression.js');
@@ -71,6 +72,28 @@ exports.createDBOFactory = function(dbDriverName, recordTypes) {
 
 	// create and return the factory
 	return new DBOFactory(dbDriver, recordTypes);
+};
+
+/**
+ * Create data source for the specified database driver.
+ *
+ * @param {string} dbDriverName Database driver name (see
+ * [createDBOFactory()]{@link module:x2node-dbos.createDBOFactory}).
+ * @param {*} source Driver-specific data source object.
+ * @returns {module:x2node-dbos.DataSource} The data source to use.
+ * @throws {module:x2node-common.X2UsageError} If the provided driver name is
+ * invalid.
+ */
+exports.createDataSource = function(dbDriverName, source) {
+
+	// lookup the driver
+	const dbDriver = DRIVERS[dbDriverName];
+	if (dbDriver === undefined)
+		throw new common.X2UsageError(
+			'Invalid database driver "' + dbDriverName + '".');
+
+	// create and returns the data source
+	return new DBDriverDataSource(dbDriver, source);
 };
 
 /**
