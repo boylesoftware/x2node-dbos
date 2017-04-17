@@ -742,7 +742,8 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 		propDesc._fetchByDefault = ((
 			(propDef.fetchByDefault === undefined) &&
 				!propDesc.isView() &&
-				!propDesc.isCalculated()
+				!propDesc.isCalculated() &&
+				!propDesc.reverseRefPropertyName
 		) || propDef.fetchByDefault);
 	});
 
@@ -967,7 +968,7 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 
 	/**
 	 * <code>true</code> if the property is fetched by default (included in the
-	 * fetch operation result with addressed with a wildcard pattern).
+	 * fetch operation result when addressed with a wildcard pattern).
 	 *
 	 * @member {boolean} module:x2node-dbos.PropertyDescriptorWithDBOs#fetchByDefault
 	 * @readonly
