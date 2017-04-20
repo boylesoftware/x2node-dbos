@@ -17,7 +17,6 @@ const validators = require('x2node-validators');
 const rsparser = require('x2node-rsparser');
 
 const DBOFactory = require('./lib/dbo-factory.js');
-const DBDriverDataSource = require('./lib/driver-data-source.js');
 const placeholders = require('./lib/placeholders.js');
 const ValueExpressionContext = require('./lib/value-expression-context.js');
 const ValueExpression = require('./lib/value-expression.js');
@@ -30,14 +29,14 @@ const orderBuilder = require('./lib/order-builder.js');
 /////////////////////////////////////////////////////////////////////////////////
 
 /**
- * Database drivers registry.
+ * Built-in database drivers.
  *
  * @private
- * @type {Object.<string,module:x2node-dbos.DBDriver>}
+ * @constant {Object.<string,function>}
  */
 const DRIVERS = {
-	'mysql': new (require('./lib/driver/mysql-driver.js'))(),
-	'pg': new (require('./lib/driver/pg-driver.js'))()
+	'mysql': require('./lib/driver/mysql-driver.js'),
+	'pg': require('./lib/driver/pg-driver.js')
 };
 
 /**
@@ -45,67 +44,39 @@ const DRIVERS = {
  * driver and the record types library. Once created, the factory instance can be
  * used by the application throughout its life cycle.
  *
- * @param {string} dbDriverName Database driver name. Out of the box, two drivers
- * are available: "mysql" (for
- * {@link https://www.npmjs.com/package/mysql} and compatible others) and
- * "pg" (for {@link https://www.npmjs.com/package/pg}). Additional drivers can be
- * registered using {@link registerDriver} function before creating the factory.
  * @param {module:x2node-records~RecordTypesLibrary} recordTypes Record types
  * library. The factory builds operations against this library. The library must
  * be extended with the <code>x2node-dbos</code> module.
+ * @param {(string|module:x2node-dbos.DBDriver)} dbDriver Either a built-in
+ * database driver name, or a custom database driver implementation. Available
+ * built-in drivers include: "mysql" (for
+ * {@link https://www.npmjs.com/package/mysql} and compatible others) and "pg"
+ * (for {@link https://www.npmjs.com/package/pg}).
+ * @param {Object.<string,*>} [options] Options.
  * @returns {module:x2node-dbos~DBOFactory} DBO factory instance.
  * @throws {module:x2node-common.X2UsageError} If the provided driver name is
  * invalid.
  */
-exports.createDBOFactory = function(dbDriverName, recordTypes) {
-
-	// lookup the driver
-	const dbDriver = DRIVERS[dbDriverName];
-	if (dbDriver === undefined)
-		throw new common.X2UsageError(
-			'Invalid database driver "' + dbDriverName + '".');
+exports.createDBOFactory = function(recordTypes, dbDriver, options) {
 
 	// make sure that the record types library is compatible
 	if (!placeholders.isTagged(recordTypes))
 		throw new common.X2UsageError(
 			'Record types library does not have the DBOs extension.');
 
+	// get driver instance
+	let dbDriverInst;
+	if ((typeof dbDriver) === 'string') {
+		if (!DRIVERS[dbDriver])
+			throw new common.X2UsageError(
+				`Invalid built-in database driver "${dbDriver}".`);
+		dbDriverInst = new DRIVERS[dbDriver](options);
+	} else { // custom driver
+		dbDriverInst = dbDriver;
+	}
+
 	// create and return the factory
-	return new DBOFactory(dbDriver, recordTypes);
-};
-
-/**
- * Create data source for the specified database driver.
- *
- * @param {string} dbDriverName Database driver name (see
- * [createDBOFactory()]{@link module:x2node-dbos.createDBOFactory}).
- * @param {*} source Driver-specific data source object.
- * @returns {module:x2node-dbos.DataSource} The data source to use.
- * @throws {module:x2node-common.X2UsageError} If the provided driver name is
- * invalid.
- */
-exports.createDataSource = function(dbDriverName, source) {
-
-	// lookup the driver
-	const dbDriver = DRIVERS[dbDriverName];
-	if (dbDriver === undefined)
-		throw new common.X2UsageError(
-			'Invalid database driver "' + dbDriverName + '".');
-
-	// create and returns the data source
-	return new DBDriverDataSource(dbDriver, source);
-};
-
-/**
- * Register custom database driver. After the driver is registered, a DBO factory
- * instance that uses the driver can be created.
- *
- * @param {string} dbDriverName Database driver name.
- * @param {module:x2node-dbos.DBDriver} dbDriver Driver implementation.
- */
-exports.registerDriver = function(dbDriverName, dbDriver) {
-
-	DRIVERS[dbDriverName] = dbDriver;
+	return new DBOFactory(dbDriverInst, recordTypes);
 };
 
 // export basic DB driver to allow extending
@@ -355,7 +326,8 @@ function invalidPropDef(propDesc, msg) {
 			' has invalid definition: ' + msg);
 }
 
-/*const PROPDESC_VALIDATORS = [
+/* JUST AN IDEA FOR THE FUTURE:
+const PROPDESC_VALIDATORS = [
 	{
 		description: 'implicit dependent reference property',
 		selector: {
