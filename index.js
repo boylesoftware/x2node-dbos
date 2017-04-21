@@ -735,7 +735,8 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 
 		// validate stored property
 		if (!propDesc.isCalculated() && !propDesc.reverseRefPropertyName &&
-			!propDesc.implicitDependentRef) {
+			!propDesc.implicitDependentRef &&
+			(propDesc.name !== propDesc.container.typePropertyName)) {
 
 			// must have a table if collection
 			if (!propDesc.isScalar() && !propDesc.table)
