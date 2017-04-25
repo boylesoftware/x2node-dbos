@@ -456,6 +456,12 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 		propDesc._table = propDef.table;
 		propDesc._parentIdColumn = propDef.parentIdColumn;
 
+		// update default optionality for some meta-info properties
+		if (propDesc._recordMetaInfoRole &&
+			propDesc._recordMetaInfoRole.startsWith('modification') &&
+			(propDef.optional === undefined))
+			propDesc._optional = true;
+
 		// update default modifiability for meta-info properties
 		if (propDesc._recordMetaInfoRole && (propDef.modifiable === undefined))
 			propDesc._modifiable = false;

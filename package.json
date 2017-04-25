@@ -27,12 +27,12 @@
     "node": ">=4.3.2"
   },
   "dependencies": {
-    "x2node-common": "^1.2.0",
+    "x2node-common": "^1.2.1",
     "x2node-patches": "^1.1.0",
     "x2node-pointers": "^1.1.0",
-    "x2node-records": "^2.1.0",
-    "x2node-rsparser": "^2.1.0",
-    "x2node-validators": "^1.0.0"
+    "x2node-records": "^2.2.0",
+    "x2node-rsparser": "^2.1.1",
+    "x2node-validators": "^1.1.0"
   },
   "devDependencies": {
     "chai": "^3.5.0",
