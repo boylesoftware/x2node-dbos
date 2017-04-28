@@ -26,7 +26,7 @@ It's worth noting that the DBOs module is not an ORM and it does not attempt to 
 
 Out of the box, the module supports _MySQL_ (_MariaDB_, _Amazon Aurora_) and _PostgreSQL_ databases. Support for more database engines will be included in the future releases. Custom database driver implementations can be plugged in as well.
 
-See complete X2 Framework for Node.js [API Reference Documentation](https://boylesoftware.github.io/x2node-api-reference/).
+See module's [API Reference Documentation](https://boylesoftware.github.io/x2node-api-reference/module-x2node-dbos.html).
 
 ## Table of Contents
 
@@ -54,6 +54,7 @@ See complete X2 Framework for Node.js [API Reference Documentation](https://boyl
   * [Record Meta-Info Properties](#record-meta-info-properties)
   * [Generated Properties](#generated-properties)
   * [Super-Properties](#super-properties)
+  * [Uniqueness of the Id Property](#uniqueness-of-the-id-property)
 * [Fetch DBO](#fetch-dbo)
   * [Selected Properties Specification](#selected-properties-specification)
   * [Filter Specification](#filter-specification)
@@ -251,33 +252,37 @@ const fetchDBO = dboFactory.buildFetch('Order', {
     range: [ 0, 5 ]
 });
 
-// configure MySQL database connection and connect
+// configure MySQL database connection
 const connection = require('mysql').createConnection({
     host: 'localhost',
     database: 'mydatabase',
     user: 'myuser',
     password: 'mypassword'
 });
+
+// connect and do the operations
 connection.connect(err => {
+
+    // check if errors
     if (err) {
         console.error('connection error');
         throw err;
     }
-});
 
-// execute the fetch DBO on the connection and close it before exiting
-fetchDBO.execute(connection, null, {
-    accountId: 10 // for example we want orders for the account id #10
-}).then(
-    result => {
-        console.log('result:\n' + JSON.stringify(result, null, '  '));
-        connection.end();
-    },
-    err => {
-        console.error('error:', err);
-        connection.end();
-    }
-);
+    // execute the fetch DBO on the connection and close it before exiting
+    fetchDBO.execute(connection, null, {
+        accountId: 10 // for example we want orders for the account id #10
+    }).then(
+        result => {
+            console.log('result:\n' + JSON.stringify(result, null, '  '));
+            connection.end();
+        },
+        err => {
+            console.error('error:', err);
+            connection.end();
+        }
+    );
+});
 ```
 
 The `result` object will include a `records` property, which will be an array with all matched order records (up to 5 in our example), and may look something like this:
@@ -1907,6 +1912,10 @@ Every record type automatically defines a super-aggregate called `count`, which 
 Note that the records collection is referred in the super-aggregate expressions as `records`.
 
 When a query with super-aggregates is executed, the super-aggregates are not a subject to the range specification, if any. They always reflect all records matching the filter regardless of the requested range.
+
+### Uniqueness of the Id Property
+
+The framework makes an assumption that any property marked with `role` attribute equal "id" is unique within the whole table. This is certainly true for record ids, but sometimes a nested object id may be unique only within the parent record context, but not table-wide. To override the default framework's behavior and make it aware of the fact that the id property is not table-wide unique, a `tableUnique` attribute can be added to the id property definition with value `false`.
 
 ## Fetch DBO
 

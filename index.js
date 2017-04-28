@@ -52,7 +52,8 @@ const DRIVERS = {
  * built-in drivers include: "mysql" (for
  * {@link https://www.npmjs.com/package/mysql} and compatible others) and "pg"
  * (for {@link https://www.npmjs.com/package/pg}).
- * @param {Object.<string,*>} [options] Options.
+ * @param {Object.<string,*>} [options] Options. If provided, the options are
+ * passed to the DB driver constructor.
  * @returns {module:x2node-dbos~DBOFactory} DBO factory instance.
  * @throws {module:x2node-common.X2UsageError} If the provided driver name is
  * invalid.
@@ -108,6 +109,9 @@ exports.isSupported = function(obj) {
 
 /**
  * Default id generator property on the library construction context.
+ *
+ * @private
+ * @constant {Symbol}
  */
 const DEFAULT_IDGEN = Symbol('DEFAULT_IDGEN');
 
@@ -426,7 +430,8 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 	// set id table-wide uniqueness
 	if (propDesc.isId())
 		propDesc._tableUnique = (
-			(propDef.tableUnique === undefined) || propDef.tableUnique);
+			(propDef.tableUnique === undefined) ||
+				(propDef.tableUnique ? true : false));
 
 	// check if record meta-info property
 	if (RECORD_METAINFO_ROLES.has(propDef.role))
@@ -477,7 +482,7 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 	}
 
 	// check if dependent reference
-	if (propDef.reverseRefProperty) {
+	if ((typeof propDef.reverseRefProperty) === 'string') {
 
 		// validate the definition
 		if (!propDesc.isRef())
@@ -496,7 +501,7 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 	}
 
 	// check if calculated value property
-	if (propDef.valueExpr) {
+	if ((typeof propDef.valueExpr) === 'string') {
 
 		// validate property definition
 		if (propDef.aggregate || !propDesc.isScalar())
@@ -613,11 +618,19 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 		});
 	}
 
+	// check if array
+	if (propDesc.isArray()) {
+
+		// get index column
+		if ((typeof propDef.indexColumn) === 'string')
+			propDesc._indexColumn = propDef.indexColumn;
+	}
+
 	// check if non-aggregate map
 	if (propDesc.isMap() && !propDef.aggregate) {
 
 		// get the key column
-		if (propDef.keyColumn) {
+		if ((typeof propDef.keyColumn) === 'string') {
 			if (propDesc.keyPropertyName)
 				throw invalidPropDef(
 					propDesc, 'may not have both keyPropertyName and' +
@@ -1052,6 +1065,17 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 	});
 
 	/**
+	 * For an array property, the name of the database column that contains the
+	 * element indexes, or nothing if the array does not utilize any.
+	 *
+	 * @member {string=} module:x2node-dbos.PropertyDescriptorWithDBOs#indexColumn
+	 * @readonly
+	 */
+	Object.defineProperty(propDesc, 'indexColumn', {
+		get() { return this._indexColumn; }
+	});
+
+	/**
 	 * For a map property that does not utilize <code>keyPropertyName</code>, the
 	 * name of the database column that contains the map entry keys.
 	 *
@@ -1108,7 +1132,7 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 	 * with a <code>valueExpr</code> attribute in the definition and aggregate
 	 * properties.
 	 *
-	 * @function module:x2node-dbos.PropertyDescriptorWithDBOs#isAggregate
+	 * @function module:x2node-dbos.PropertyDescriptorWithDBOs#isCalculated
 	 * @returns {boolean} <code>true</code> if aggregate property.
 	 */
 	propDesc.isCalculated = function() {
