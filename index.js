@@ -728,14 +728,33 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 		});
 	}
 
-	// determine fetch by default flag
+	// final touches
 	ctx.onLibraryComplete(() => {
+
+		// determine fetch by default flag
 		propDesc._fetchByDefault = ((
 			(propDef.fetchByDefault === undefined) &&
 				!propDesc.isView() &&
 				!propDesc.isCalculated() &&
 				!propDesc.reverseRefPropertyName
 		) || propDef.fetchByDefault);
+
+		// determine if entangled reference property
+		if (propDesc.isRef() && propDesc.table) {
+			propDesc._entangled = false;
+			const targetRecordTypeDesc = propDesc.nestedProperties;
+			for (let targetPropName of targetRecordTypeDesc.allPropertyNames) {
+				const targetPropDesc = targetRecordTypeDesc.getPropertyDesc(
+					targetPropName);
+				if (targetPropDesc.isRef() &&
+					(targetPropDesc.table === propDesc.table) &&
+					(targetPropDesc.column === propDesc.parentIdColumn) &&
+					(targetPropDesc.parentIdColumn === propDesc.column)) {
+					propDesc._entangled = true;
+					break;
+				}
+			}
+		}
 	});
 
 	// setup validation for non-stored and special role properties
@@ -1119,6 +1138,17 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 	 */
 	propDesc.isWeakDependency = function() {
 		return this._weakDependency;
+	};
+
+	/**
+	 * Tell if the stored reference property is entangled with a stored reference
+	 * property of its target record type (they share the same link table).
+	 *
+	 * @function module:x2node-dbos.PropertyDescriptorWithDBOs#isEntangled
+	 * @returns {boolean} <code>true</code> if entangled reference property.
+	 */
+	propDesc.isEntangled = function() {
+		return this._entangled;
 	};
 
 	/**
