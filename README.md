@@ -1671,7 +1671,48 @@ Note, that to order a simple value collection by the value, `$value` pseudo-prop
 
 ### Array Index Column
 
-_Will be implemented in a (near) future release._
+Unless an `order` attribute is specified on an array property, the order, in which the elements will be returned in the fetch DBO result, is undetermined. It is possible, however, to make an array property strictly ordered by the insertion order. To do that, the table used to store the array elements can have a special element index column maintained automatically by the framework. For example if we want to have tags on _Product_ records and we want the tags list to have specific order, we add a tag index column to the table:
+
+```sql
+CREATE TABLE products (
+    id INTEGER UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    ...
+);
+
+CREATE TABLE product_tags (
+    product_id INTEGER UNSIGNED NOT NULL,
+    ind TINYINT UNSIGNED NOT NULL,
+    tag VARCHAR(20) NOT NULL,
+    FOREIGN KEY (product_id) REFERENCES products (id),
+    UNIQUE (product_id, ind)
+);
+```
+
+To let the framework manage the index column, `indexColumn` attribute is added to the array property definition:
+
+```javascript
+{
+    ...
+    'Product': {
+        table: 'accounts',
+        properties: {
+            ...
+            'tags': {
+                valueType: 'string[]',
+                table: 'product_tags',
+                parentIdColumn: 'product_id',
+                indexColumn: 'ind',
+                column: 'tag'
+            }
+        }
+    },
+    ...
+}
+```
+
+Whenever the DBOs are used to create and modify the `tags` array, the framework will be generating additional SQL to maintain the index values in sync with the array element indexes. And when a fetch DBO is used to fetch _Product_ records, the `tags` property will always be ordered by the index column.
+
+The same works with nested object arrays as well.
 
 ### Filtered Collection Views
 

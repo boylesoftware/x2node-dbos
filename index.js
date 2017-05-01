@@ -875,6 +875,12 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 						' modifiable, calculated, stored in a table/column' +
 						' or belong to a nested object.');
 
+			// index column not allowed on dependent record references
+			if (propDesc.isArray() && propDesc.indexColumn)
+				throw invalidPropDef(
+					propDesc, 'dependent reference array property may not have' +
+						' index column.');
+
 			// validate reverse reference property in the referred record type
 			const refTarget = recordTypes.getRecordTypeDesc(propDesc.refTarget);
 			if (!refTarget.hasProperty(propDesc.reverseRefPropertyName))
