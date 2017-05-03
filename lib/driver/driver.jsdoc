@@ -5,6 +5,14 @@
  * @memberof module:x2node-dbos
  */
 /**
+ * Tell if the underlying database supports explicit row locking in
+ * <code>SELECT</code> queries with aggregates (e.g. <em>MySQL</em>) or not
+ * (e.g. <em>PostgreSQL</em>).
+ *
+ * @function module:x2node-dbos.DBDriver#supportsRowLocksWithAggregates
+ * @returns {boolean} <code>true</code> if supported.
+ */
+/**
  * Get SQL for the specified ES value.
  *
  * @function module:x2node-dbos.DBDriver#sql
@@ -80,15 +88,6 @@
  * @returns {string} SQL expression that pads the string on the left.
  */
 /**
- * Make SQL expression that concatenates the specified string SQL expressions and
- * evaluates to <code>NULL</code> if any of them is <code>NULL</code>.
- *
- * @function module:x2node-dbos.DBDriver#nullableConcat
- * @param {...string} exprs String SQL expressions to concatenate.
- * @returns {string} SQL expression that concatenates the specified string SQL
- * expressions.
- */
-/**
  * Make SQL expression for getting a substring of the specified string SQL
  * expression.
  *
@@ -100,6 +99,15 @@
  * not number, assumed to be a SQL expression. If not specified, the end of the
  * string is assumed.
  * @returns {string} SQL expression for the substring.
+ */
+/**
+ * Make SQL expression that concatenates the specified string SQL expressions and
+ * evaluates to <code>NULL</code> if any of them is <code>NULL</code>.
+ *
+ * @function module:x2node-dbos.DBDriver#nullableConcat
+ * @param {...string} exprs String SQL expressions to concatenate.
+ * @returns {string} SQL expression that concatenates the specified string SQL
+ * expressions.
  */
 /**
  * Make SQL expression that converts the specified SQL expression to string.
@@ -119,6 +127,42 @@
  * <code>NULL</code>.
  */
 /**
+ * Make SQL expression that evaluates to the result of the first of the specified
+ * SQL expressions that is not <code>NULL</code>, or <code>NULL</code> if all
+ * evaluate to <code>NULL</code>.
+ *
+ * @function module:x2node-dbos.DBDriver#coalesce
+ * @param {...string} exprs SQL expressions to evaluate.
+ * @returns {string} SQL expression that evaluates to the first
+ * non-<code>NULL</code>.
+ */
+/**
+ * Make Boolean SQL expression that matches the specified character value
+ * expression against a <code>LIKE</code> pattern.
+ *
+ * @function module:x2node-dbos.DBDriver#patternMatch
+ * @param {string} expr SQL character expression to match.
+ * @param {string} pattern SQL expression for the <code>LIKE</code> pattern.
+ * @param {boolean} invert <code>true</code> to test if the value does
+ * <em>not</em> match the pattern.
+ * @param {boolean} caseSensitive <code>true</code> to make the test
+ * case-sensitive.
+ * @returns {string} Boolean SQL expression for the test.
+ */
+/**
+ * Make Boolean SQL expression that matches the specified character value
+ * expression against a regular expression.
+ *
+ * @function module:x2node-dbos.DBDriver#regexpMatch
+ * @param {string} expr SQL character expression to match.
+ * @param {string} regexp SQL expression for the regular expression.
+ * @param {boolean} invert <code>true</code> to test if the value does
+ * <em>not</em> match the regular expression.
+ * @param {boolean} caseSensitive <code>true</code> to make the test
+ * case-sensitive.
+ * @returns {string} Boolean SQL expression for the test.
+ */
+/**
  * Make specified <code>SELECT</code> statement ranged.
  *
  * @function module:x2node-dbos.DBDriver#makeRangedSelect
@@ -128,14 +172,42 @@
  * @returns {string} Ranged <code>SELECT</code> statement.
  */
 /**
- * Make SQL expression that evaluates to the result of the first of the specified
- * SQL expressions that is not <code>NULL</code>, or <code>NULL</code> if all
- * evaluate to <code>NULL</code>.
+ * Make specified <code>SELECT</code> statement store its result in a temporary
+ * table.
  *
- * @function module:x2node-dbos.DBDriver#coalesce
- * @param {...string} exprs SQL expressions to evaluate.
- * @returns {string} SQL expression that evaluates to the first
- * non-<code>NULL</code>.
+ * @function module:x2node-dbos.DBDriver#makeSelectIntoTempTable
+ * @param {string} selectStmt The <code>SELECT</code> statement.
+ * @param {string} tempTableName Temporary table name.
+ * @param {Array.<string>} preStatements The method adds SQL statements that need
+ * to be executed to create and populate the temporary table to this array.
+ * @param {Array.<string>} postStatements The method adds SQL statements that
+ * need to be executed to clean up the temporary table after use to this array.
+ */
+/**
+ * Make the specified <code>SELECT</code> statement explicitely lock involved
+ * rows.
+ *
+ * @function module:x2node-dbos.DBDriver#makeSelectWithLocks
+ * @param {string} selectStmt The <code>SELECT</code> statement.
+ * @param {Array.<string>} [exclusiveLockTables] List of tables to lock in
+ * exclusive mode.
+ * @param {Array.<string>} [sharedLockTables] List of tables to lock in shared
+ * mode.
+ * @returns <code>SELECT</code> statement based on the provided one that places
+ * the requested locks.
+ */
+/**
+ * Construct statement for placing transaction-scoped full table locks. Not all
+ * databases support it (e.g. <em>MySQL</em> supports explicit table locks but
+ * they are not transaction-scoped but session-scoped).
+ *
+ * @function module:x2node-dbos.DBDriver#buildLockTables
+ * @param {Array.<string>} [exclusiveLockTables] List of tables to lock in
+ * exclusive mode.
+ * @param {Array.<string>} [sharedLockTables] List of tables to lock in shared
+ * mode.
+ * @returns {string} Statement to run to place the requested locks.
+ * @throws {external:Error} If the database does not support it.
  */
 /**
  * Construct a SQL <code>DELETE</code> statement that can have a

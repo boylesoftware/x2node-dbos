@@ -58,8 +58,12 @@ See module's [API Reference Documentation](https://boylesoftware.github.io/x2nod
 * [Fetch DBO](#fetch-dbo)
   * [Selected Properties Specification](#selected-properties-specification)
   * [Filter Specification](#filter-specification)
+    * [Logical Junctions](#logical-junctions)
+    * [Tests](#tests)
+    * [Collection Tests](#collection-tests)
   * [Order Specification](#order-specification)
   * [Range Specification](#range-specification)
+  * [Records Locking](#records-locking)
 * [Insert DBO](#insert-dbo)
 * [Update DBO](#update-dbo)
 * [Delete DBO](#delete-dbo)
@@ -1092,7 +1096,7 @@ At the same time, we want to have a list of addresses on the account records and
 }
 ```
 
-Properties `addressRefs` on record type _Account_ and `accountRefs` on record type _Address_ share the same link table `accounts_addresses`. This case is unique in the sense that modification of a record of one record type may have a side-effect of making changes to stored properties of some records of another record type.
+Properties `addressRefs` on record type _Account_ and `accountRefs` on record type _Address_ share the same link table `accounts_addresses`. This case is unique in the sense that modification of a record of one record type may have a side-effect of making changes to stored properties of some records of another record type. Such record types and the properties that reference each other are known as _entangled_.
 
 ### Calculated Properties
 
@@ -1990,17 +1994,19 @@ The `execute()` method returns a `Promise`, which is fulfilled with the query re
 
 The promise is rejected if an error occurs.
 
-The query specification is an object that includes up to four sections:
+The query specification is an object that includes the following sections, each of which is optional and has a default behavior:
 
 * Specification of what record properties, referred records and super-properties to include in the result. Specified by the `props` array.
 
-* The filter specification that asks the DBO to include only those records that match the criteria. Specified by the `filter` array.
+* Filter specification that asks the DBO to include only those records that match the criteria. Specified by the `filter` array.
 
-* The order specification, which tells the DBO how to order the records in the result's `records` array. Specified by the `order` array.
+* Order specification that tells the DBO how to order the records in the result's `records` array. Specified by the `order` array.
 
-* And the range specification that tells the DBO to return only the specified subrange of all the matched records. Specified by the `range` two-element array.
+* Range specification that tells the DBO to return only the specified subrange of all the matched records. Specified by the `range` two-element array.
 
-If no query specification is provided to the `buildFetch()` method, all records of the requested record type are included in the result with all the properties that are fetched by default (normally that includes all stored properties) and in no particular order. No referred records are fetched and no super-aggregates either.
+* Records locking specification that asks the DBO to lock matched records in a specific mode until the end of the transaction.
+
+If no query specification is provided to the `buildFetch()` method, all records of the requested record type are included in the result with all the properties that are fetched by default (normally that includes all stored properties) and in no particular order. No referred records are fetched, no super-aggregates are fetch, and the DBO makes not effort to explicitely lock any matched records.
 
 ### Selected Properties Specification
 
@@ -2246,6 +2252,12 @@ The range applies to records, not SQL query result set rows, even if the request
 
 Also note, that the range specification does not affect the super-aggregates, which always refect the whole collection of matched records regardless of the requested range. This allows, for example, to calculate the total number of pages during result set pagination and return correct totals in general regardless of the requested page.
 
+### Records Locking
+
+When a fetch DBO is used as a part of a larger transaction (see [Transactions](#transactions)) it sometimes necessary to ask the DBO to lock involved data in a certain mode until the end of the transaction. There are two types of locks that are specified by the query specification object's `lock` property: "shared" and "exclusive".
+
+From the point of view of the DBO, there are two types of records that may be locked: the matched records of the main record type being fetched, and any referred records of other record types. When the `lock` property has value "shared", all records&mdash;both main record type records and used referred records, if any&mdash;are lock in such a way that protects them against modification by other transactions until the end of the transaction, in which the DBO is participating. When the `lock` is "exclusive", the main record type records are protected against reading by other transactions and any referred records are locked in the "shared" mode, which protects them against modification. The "exclusive" mode is used to fetch the data of records before making modifications to them so that the modifications are made based on the current record data and other transactions are not allowed to see the data until the modifications are completed.
+
 ## Insert DBO
 
 The insert DBO is used to create new records of a given record type. The DBO is created using DBO factory's `buildInsert()` method, which takes the record type name and the record template, which is the record data sans any properties that are automatically generated (such as record id, meta-info properties, other [generated properties](#generated-properties)). See [Creating Records](#creating-records) in the opening usage section for an example.
@@ -2291,6 +2303,8 @@ The returned by the `execute()` method promise, if not rejected as a result of a
 * `testFailed` - The supplied patch may have contained `test` operations (see _JSON Patch_ specification). If so, those matched records, for which the test failed were not updated by the DBO. The `test` patch operation failure is not considered a DBO error. If it happens for a record, the record is left alone and the DBO continues on to the rest of the matched records. However, if a `test` failed for any of the matched records, the `testFailed` flag in the update operation result object will be set to `true`. Also note, that the records, for which `test` failed, may appear partially modified in the `records` array, even though those partial modifications were never flushed to the database by the DBO.
 
 * `failedRecordIds` - If `testFailed` is `true`, this is an array with ids of those records in the `records` array, for which the `test` patch operation failed.
+
+Note, that if the update DBO participates in a larger transaction, it places an "exclusive" lock on the matched records.
 
 ## Delete DBO
 
