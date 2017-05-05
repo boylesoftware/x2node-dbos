@@ -319,6 +319,33 @@
  * failure. The function receives a single argument with the error object.
  */
 /**
+ * Set server-side session variable.
+ *
+ * @function module:x2node-dbos.DBDriver#setSessionVariable
+ * @param {*} connection Driver-specific database connection object.
+ * @param {string} varName Variable name.
+ * @param {string} valueExpr SQL expression for the variable value.
+ * @param {Object} handler The operation result handler.
+ * @param {function} handler.onSuccess Fucntion that gets called upon operation
+ * success.
+ * @param {function} handler.onError Fucntion that gets called upon operation
+ * failure. The function receives a single argument with the error object.
+ */
+/**
+ * Get server-side session variable.
+ *
+ * @function module:x2node-dbos.DBDriver#getSessionVariable
+ * @param {*} connection Driver-specific database connection object.
+ * @param {string} varName Variable name.
+ * @param {string} type Expected variable type: "number", "boolean" or "string".
+ * @param {Object} handler The operation result handler.
+ * @param {function} handler.onSuccess Fucntion that gets called upon operation
+ * success. The function receives the variable value as its only argument. If the
+ * variable is not set, <code>undefined</code> is passed to the function.
+ * @param {function} handler.onError Fucntion that gets called upon operation
+ * failure. The function receives a single argument with the error object.
+ */
+/**
  * Execute specified statement on the specified database connection. The
  * statement may be returning a result set.
  *
