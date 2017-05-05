@@ -194,7 +194,8 @@
  * @param {Array.<string>} [sharedLockTables] List of tables to lock in shared
  * mode.
  * @returns <code>SELECT</code> statement based on the provided one that places
- * the requested locks.
+ * the requested locks. If provided table lists were empty, the original query is
+ * returned unchanged.
  */
 /**
  * Construct statement for placing transaction-scoped full table locks. Not all
