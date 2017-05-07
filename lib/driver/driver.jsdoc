@@ -172,27 +172,17 @@
  * @returns {string} Ranged <code>SELECT</code> statement.
  */
 /**
- * Make specified <code>SELECT</code> statement store its result in a temporary
- * table.
- *
- * @function module:x2node-dbos.DBDriver#makeSelectIntoTempTable
- * @param {string} selectStmt The <code>SELECT</code> statement.
- * @param {string} tempTableName Temporary table name.
- * @param {Array.<string>} preStatements The method adds SQL statements that need
- * to be executed to create and populate the temporary table to this array.
- * @param {Array.<string>} postStatements The method adds SQL statements that
- * need to be executed to clean up the temporary table after use to this array.
- */
-/**
  * Make the specified <code>SELECT</code> statement explicitely lock involved
  * rows.
  *
  * @function module:x2node-dbos.DBDriver#makeSelectWithLocks
  * @param {string} selectStmt The <code>SELECT</code> statement.
- * @param {Array.<string>} [exclusiveLockTables] List of tables to lock in
- * exclusive mode.
- * @param {Array.<string>} [sharedLockTables] List of tables to lock in shared
- * mode.
+ * @param {Array.<Object>} [exclusiveLockTables] Descriptors of tables to lock in
+ * exclusive mode. Descriptors have two properties: <code>tableName</code> and
+ * <code>tableAlias</code>.
+ * @param {Array.<Object>} [sharedLockTables] Descriptors of tables to lock in
+ * shared mode. Descriptors have two properties: <code>tableName</code> and
+ * <code>tableAlias</code>.
  * @returns <code>SELECT</code> statement based on the provided one that places
  * the requested locks. If provided table lists were empty, the original query is
  * returned unchanged.
@@ -346,6 +336,34 @@
  * failure. The function receives a single argument with the error object.
  */
 /**
+ * Load the results of a <code>SELECT</code> query that is used to select record
+ * ids into a temporary anchor table. The resulting table will have two columns:
+ * "id" for the record ids returned by the <code>SELECT</code> query, and "ord"
+ * with sequential numbers reflecting the order, in which the <code>SELECT</code>
+ * query returned the ids.
+ *
+ * @function module:x2node-dbos.DBDriver#selectIntoAnchorTable
+ * @param {*} connection Driver-specific database connection object.
+ * @param {string} anchorTableName Name for the temporary anchor table.
+ * @param {string} topTableName Name of the top table in the <code>SELECT</code>
+ * query. This is the table that contains the ids.
+ * @param {string} idColumnName Name of the column in <code>topTableName</code>
+ * table that contains the ids being loaded into the anchor table.
+ * @param {string} idExpr SQL value expression for the ids returned by the
+ * <code>SELECT</code> query.
+ * @param {string} statementStump The <code>SELECT</code> query with "{*}"
+ * placeholder in the place of the select list.
+ * @param {Object} handler The operation result handler.
+ * @param {function} handler.onSuccess Fucntion that gets called upon operation
+ * success. The function receives the number of ids loaded into the anchor table
+ * as its only argument.
+ * @param {function} handler.onError Function that gets called upon operation
+ * failure. The function receives a single argument with the error object.
+ * @param {function} [handler.trace] Function that gets called before the method
+ * sends a SQL command to the database. The command SQL is passed to the function
+ * as its only argument.
+ */
+/**
  * Execute specified statement on the specified database connection. The
  * statement may be returning a result set.
  *
@@ -355,7 +373,7 @@
  * @param {Object} handler The operation result handler.
  * @param {function} handler.onSuccess Fucntion that gets called upon operation
  * success.
- * @param {function} handler.onError Fucntion that gets called upon operation
+ * @param {function} handler.onError Function that gets called upon operation
  * failure. The function receives a single argument with the error object.
  * @param {function} [handler.onHeader] Function that gets called when the
  * <code>SELECT</code> query result set descriptor is received from the database.
