@@ -2361,6 +2361,8 @@ Alternatively, the application can manage transactions by itself. A transaction 
 
 * `connection` - The database connection object passed in to the `newTransaction()` method.
 
+* `dbDriver` - The database driver associated with the DBO factory used to create the transaction.
+
 * `start([passThrough])` - Start the transaction. The `newTransaction()` method creates a transaction handler, but it does not start the transaction. The application must do it using the `start()` method before it passes the transaction handler object to the DBO to be used. The `start()` method returns a `Promise` which, if the transaction has been successfully initiated, is fulfilled with the optional `passThrough` argument, or is rejected with an error if the transaction could not be started. After the transaction is started and before it is committed or rolled back it is considered _active_.
 
 * `commit([passThrough])` - Commit an active transaction. The method returns a `Promise`, which fulfills with the optional `passThrough` argument if the transaction is successfully committed, or rejected with an error if the transaction could not be committed.

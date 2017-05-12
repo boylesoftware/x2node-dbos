@@ -1,0 +1,34 @@
+/**
+ * Interface for components that monitor updates to record collections of each
+ * record type as a whole.
+ *
+ * @interface RecordCollectionsMonitor
+ * @memberof module:x2node-dbos
+ */
+/**
+ * Called by the DBOs from within the transactions when records of the given
+ * record types are modified. The method is called just before the transaction is
+ * committed.
+ *
+ * @function module:x2node-dbos.RecordCollectionsMonitor#collectionsUpdated
+ * @param {module:x2node-dbos~DBOExecutionContext} ctx DBO execution context.
+ * @param {Set.<string>} recordTypeNames Names of updated record types.
+ * @returns {Promise} If a <code>Promise</code> is returned, the transaction is
+ * not committed until the promise is fulfilled. If the promise is rejected, the
+ * whole transaction gets rolled back. Any other type of returned value is
+ * ignored and the transaction is committed immediately.
+ */
+/**
+ * Get record collection version information for the specified record types.
+ *
+ * @function module:x2node-dbos.RecordCollectionsMonitor#getCollectionsVersion
+ * @param {module:x2node-dbos~Transaction} tx The transaction.
+ * @param {Set.<string>} recordTypeNames Names of the record types to include.
+ * @param {string} [lockType] If provided, the collections are locked until the
+ * end of the transaction. The value can be either "shared" or "exclusive".
+ * @returns {Promise.<Object>} Promise of the result object. The result object
+ * includes two properties: <code>modifiedOn</code>, which is a <code>Date</code>
+ * representing the last modification timestamp of the records collection among
+ * the requested ones that was modified most recently, and <code>version</code>,
+ * which is a number that is a sum of all requested record collection versions.
+ */
