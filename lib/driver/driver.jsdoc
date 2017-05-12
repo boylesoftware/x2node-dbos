@@ -255,6 +255,21 @@
  * @returns {string} The resulting <code>UPDATE</code> statement.
  */
 /**
+ * Build a SQL statement that performs an "upsert" operation.
+ *
+ * @function module:x2node-dbos.DBDriver#buildUpsert
+ * @param {string} tableName Name of the table for the update/insert.
+ * @param {string} insertColumns Comma-separated list of columns for the
+ * <code>INSERT</code> statement.
+ * @param {string} insertValues Comma-separated list of values for the
+ * <code>INSERT</code> statement's <code>VALUES</code> clause.
+ * @param {string} uniqueColumn Name of the column that has the unique constraint
+ * that is expected to be violated on the insert attempt.
+ * @param {string} sets Comma-separated list of column/value assignments for the
+ * <code>UPDATE</code> statement's <code>SET</code> clause.
+ * @returns {string} The resulting SQL statement.
+ */
+/**
  * Acquire database connection.
  *
  * @function module:x2node-dbos.DBDriver#connect
@@ -423,6 +438,23 @@
  * @function module:x2node-dbos.DBDriver#createVersionTableIfNotExists
  * @param {*} connection Driver-specific database connection object.
  * @param {string} tableName Table name.
+ * @param {Object} handler The operation result handler.
+ * @param {function} handler.onSuccess Function that gets called upon operation
+ * success.
+ * @param {function} handler.onError Function that gets called upon operation
+ * failure. The function receives a single argument with the error object.
+ * @param {function} [handler.trace] Function that gets called before the method
+ * sends a SQL command to the database. The command SQL is passed to the function
+ * as its only argument.
+ */
+/**
+ * Update versions tracking table.
+ *
+ * @function module:x2node-dbos.DBDriver#updateVersionTable
+ * @param {*} connection Driver-specific database connection object.
+ * @param {string} tableName Table name.
+ * @param {Array.<string>} itemNames Names of the items to update.
+ * @param {string} modificationTimestamp Modification timestamp.
  * @param {Object} handler The operation result handler.
  * @param {function} handler.onSuccess Function that gets called upon operation
  * success.
