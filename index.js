@@ -845,6 +845,7 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 						' object.');
 
 			// validate property value type
+			/* eslint-disable no-fallthrough */
 			switch (propDesc.recordMetaInfoRole) {
 			case 'version':
 				if (propDesc.scalarValueType !== 'number')
@@ -873,6 +874,7 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 						propDesc, 'record creation/modification actor may only' +
 							' be a string or a number.');
 			}
+			/* eslint-enable no-fallthrough */
 		}
 
 		// validate calculated property
