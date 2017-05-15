@@ -850,16 +850,23 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 				if (propDesc.scalarValueType !== 'number')
 					throw invalidPropDef(
 						propDesc, 'record version may only be a number.');
+				if (!propDesc.fetchByDefault)
+					throw invalidPropDef(
+						propDesc, 'record version must be fetched by default.');
 				break;
-			case 'creationTimestamp':
 			case 'modificationTimestamp':
+				if (!propDesc.fetchByDefault)
+					throw invalidPropDef(
+						propDesc, 'record modification timestamp must be' +
+							' fetched by default.');
+			case 'creationTimestamp':
 				if (propDesc.scalarValueType !== 'datetime')
 					throw invalidPropDef(
 						propDesc, 'record creation/modification timestamp may' +
 							' only be a datetime.');
 				break;
-			case 'creationActor':
 			case 'modificationActor':
+			case 'creationActor':
 				if ((propDesc.scalarValueType !== 'string') &&
 					(propDesc.scalarValueType !== 'number'))
 					throw invalidPropDef(
