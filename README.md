@@ -1856,7 +1856,7 @@ recordTypes = {
                 valueType: 'object[]',
                 ...
                 properties: {
-                    'eventUUID: {
+                    'eventUUID': {
                         valueType: 'string',
                         role: 'id',
                         generator: null // assigned by the application
