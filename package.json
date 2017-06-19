@@ -1,6 +1,6 @@
 {
   "name": "x2node-dbos",
-  "version": "1.0.2",
+  "version": "1.0.3-alpha.0",
   "description": "SQL database operations.",
   "keywords": [
     "sql",
@@ -32,7 +32,7 @@
     "x2node-pointers": "^1.2.3",
     "x2node-records": "^2.2.4",
     "x2node-rsparser": "^2.1.5",
-    "x2node-validators": "^1.1.4"
+    "x2node-validators": "^1.1.5"
   },
   "devDependencies": {
     "chai": "^3.5.0",
