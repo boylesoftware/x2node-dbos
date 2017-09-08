@@ -36,7 +36,9 @@ const orderBuilder = require('./lib/order-builder.js');
  */
 const DRIVERS = {
 	'mysql': require('./lib/driver/mysql-driver.js'),
-	'pg': require('./lib/driver/pg-driver.js')
+	'pg': require('./lib/driver/pg-driver.js'),
+    'sqlite': require('./lib/driver/sqlite-driver.js'),
+    'sqlite3': require('./lib/driver/sqlite-driver.js')
 };
 
 /**
