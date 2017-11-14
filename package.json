@@ -1,6 +1,6 @@
 {
   "name": "x2node-dbos",
-  "version": "1.0.11",
+  "version": "1.0.12",
   "description": "SQL database operations.",
   "keywords": [
     "sql",
