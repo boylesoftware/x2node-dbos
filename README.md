@@ -217,6 +217,8 @@ const dboFactory = dbos.createDBOFactory(recordTypes, 'mysql');
 
 The DBO factory is provided with the record types library and the database driver, so that it knows how to construct database engine-specific SQL. Out-of-the-box the module supports [mysql](https://www.npmjs.com/package/mysql) (and other compatible implementations) and [pg](https://www.npmjs.com/package/pg). Custom driver implementations can be provided to the DBO factory as well.
 
+The `createDBOFactory()` function can also take a third argument, `options`, which is an object passed directly to the database driver implementation. The built-in _PostgreSQL_ driver does not take any options. The built-in _MySQL_ driver, however, can take a Boolean `mariaDB` option, which, if set and is `true`, will force _MariaDB_ specific logic in the driver (there are some incompatibilities between _MySQL_ and _MariaDB_, which the driver has to work around). If the option is not provided, the driver will make an attempt to detect if it's connected to _MariaDB_ by analyzing the handshake packet. If the driver cannot determine the underlying database kind, it defaults to the _MySQL_ logic.
+
 Normally, a factory is created once by the application when it starts up and is used to construct DBOs throughout the application's lifecycle.
 
 The DBO factory can be used to construct four types of DBOs:
