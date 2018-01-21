@@ -2372,6 +2372,8 @@ Alternatively, the application can manage transactions by itself. A transaction 
 
 * `rollback([passThrough])` - Rollback an active transaction. The method returns a `Promise`, which fulfills with the optional `passThrough` argument if the transaction is successfully rolled back, or rejected with an error if the transaction could not be rolled back.
 
+* `rollbackAndReject([passThrough])` - Same as `rollback()`, but the returned promise is always rejected (with the pass-through value) whether the transaction was rolled back successfully or not.
+
 * `isActive()` - Returns `true` if the transaction has been started but not yet committed or rolled back.
 
 An _active_ transaction handler can be passed in to any DBO's `execute()` method as the first argument instead of the database connection:
