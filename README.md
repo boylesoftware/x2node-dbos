@@ -2396,10 +2396,7 @@ pool.getConnection((err, connection) => {
         err => Promise.reject(err)
     ).then(
         result => tx.commit(result),
-        err => (tx.isActive() ? tx.rollback(err).then(
-            err => Promise.reject(err),
-            (/* rollback error */) => Promise.reject(err)
-        ) : Promise.reject(err))
+        err => (tx.isActive() ? tx.rollbackAndReject(err) : Promise.reject(err))
     ).then(
         result => {
             connection.release();
