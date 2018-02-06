@@ -427,6 +427,10 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 		propDesc._generator = ctx[DEFAULT_IDGEN];
 	}
 
+	// set generated flag
+	propDesc._isGenerated = (
+		(propDesc._generator !== undefined) && (propDesc._generator !== null));
+
 	// set id table-wide uniqueness
 	if (propDesc.isId())
 		propDesc._tableUnique = (
@@ -434,8 +438,10 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 				(propDef.tableUnique ? true : false));
 
 	// check if record meta-info property
-	if (RECORD_METAINFO_ROLES.has(propDef.role))
+	if (RECORD_METAINFO_ROLES.has(propDef.role)) {
+		propDesc._isRecordMetaInfo = true;
 		propDesc._recordMetaInfoRole = propDef.role;
+	}
 
 	// get stored property parameters
 	if (!propDef.valueExpr && !propDef.aggregate &&
@@ -462,13 +468,13 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 		propDesc._parentIdColumn = propDef.parentIdColumn;
 
 		// update default optionality for some meta-info properties
-		if (propDesc._recordMetaInfoRole &&
+		if (propDesc._isRecordMetaInfo &&
 			propDesc._recordMetaInfoRole.startsWith('modification') &&
 			(propDef.optional === undefined))
 			propDesc._optional = true;
 
 		// update default modifiability for meta-info properties
-		if (propDesc._recordMetaInfoRole && (propDef.modifiable === undefined))
+		if (propDesc._isRecordMetaInfo && (propDef.modifiable === undefined))
 			propDesc._modifiable = false;
 
 	} else {
@@ -510,7 +516,7 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 					' non-scalar.');
 
 		// compile the property value expression
-		propDesc._valueExpr = true; // mark as calculated right away
+		propDesc._isCalculated = true; // mark as calculated right away
 		ctx.onLibraryComplete(() => {
 			try {
 				propDesc._valueExpr = new ValueExpression(
@@ -553,7 +559,7 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 		if (valueExprSpecParts === null)
 			throw invalidPropDef(
 				propDesc, 'invalid aggregated value expression syntax.');
-		propDesc._valueExpr = true; // mark as calculated right away
+		propDesc._isCalculated = true; // mark as calculated right away
 		propDesc._aggregateFunc = valueExprSpecParts[2].toUpperCase();
 		ctx.onLibraryComplete(recordTypes => {
 
@@ -759,8 +765,8 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 
 	// setup validation for non-stored and special role properties
 	if (!propDesc.isView()) {
-		if (propDesc._recordMetaInfoRole || propDesc._generator ||
-			propDesc._valueExpr || propDesc._reverseRefPropertyName)
+		if (propDesc._isRecordMetaInfo || propDesc._isGenerated ||
+			propDesc._isCalculated || propDesc._reverseRefPropertyName)
 			validators.replaceDefaultValidators(propDesc, {
 				'onCreate': [ 'empty' ]
 			});
@@ -1050,17 +1056,6 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 	});
 
 	/**
-	 * Tell if the property is a record meta-info property, in which case the
-	 * <code>recordMetaInfoRole</code> descrpitor property exposes the role.
-	 *
-	 * @function module:x2node-dbos.PropertyDescriptorWithDBOs#isRecordMetaInfo
-	 * @returns {boolean} <code>true</code> if record meta-info property.
-	 */
-	propDesc.isRecordMetaInfo = function() {
-		return (this._recordMetaInfoRole !== undefined);
-	};
-
-	/**
 	 * For a record meta-info property this is the property role, which can be
 	 * one of the following: "version", "creationTimestamp", "creationActor",
 	 * "modificationTimestamp" or "modificationActor".
@@ -1071,17 +1066,6 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 	Object.defineProperty(propDesc, 'recordMetaInfoRole', {
 		get() { return this._recordMetaInfoRole; }
 	});
-
-	/**
-	 * Tell if the property value is generated for new records. If so,
-	 * <code>generator</code> descrpitor property has a value.
-	 *
-	 * @function module:x2node-dbos.PropertyDescriptorWithDBOs#isGenerated
-	 * @returns {boolean} <code>true</code> if generated property.
-	 */
-	propDesc.isGenerated = function() {
-		return ((this._generator !== undefined) && (this._generator !== null));
-	};
 
 	/**
 	 * For a property, whose value is generated for new records, this is the
@@ -1171,18 +1155,6 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 	Object.defineProperty(propDesc, 'valueExpr', {
 		get() { return this._valueExpr; }
 	});
-
-	/**
-	 * Tell if this is a calculated value property, which includes properties
-	 * with a <code>valueExpr</code> attribute in the definition and aggregate
-	 * properties.
-	 *
-	 * @function module:x2node-dbos.PropertyDescriptorWithDBOs#isCalculated
-	 * @returns {boolean} <code>true</code> if aggregate property.
-	 */
-	propDesc.isCalculated = function() {
-		return (this._valueExpr !== undefined);
-	};
 
 	/**
 	 * For an aggregate property, the aggregation function, which may be "COUNT",
