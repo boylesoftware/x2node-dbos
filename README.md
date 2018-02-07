@@ -2283,9 +2283,9 @@ The update DBO is used to modify existing records. The DBO is created using DBO 
 
 * The patch specification created using [x2node-patches](https://www.npmjs.com/package/x2node-patches) module.
 
-* A filter for the records to patch.
+* A filter for the records to patch or a fetcher function that provides the DBO with the records to patch.
 
-Note, that update DBO is not made for bulk record updates. The way it works is it selects all records that pass the filter with all their properties that are fetched by default, loads them into memory, and then applies the patch and saves the changes back into the database for each record one by one. The main use-case for the update DBO is updating a single record selected by its id, or a small number of records. For bulk record updates custom SQL statements are used.
+Note, that update DBO is not made for bulk record updates. The way it works is it selects all records that pass the filter with all their properties that are fetched by default (that is the filter was specified and not a fetcher function), loads them into memory, and then applies the patch and saves the changes back into the database for each record one by one. The main use-case for the update DBO is updating a single record selected by its id, or a small number of records. For bulk record updates custom SQL statements are used.
 
 To execute the DBO, its `execute()` method is called. The method takes the following arguments:
 
@@ -2295,7 +2295,7 @@ To execute the DBO, its `execute()` method is called. The method takes the follo
 
 * `recordValidators` - Optional functions used to validate/normalize the records right before and after the patch is applied, but before the changes are saved into the database. The argument is an object with two optional functions: `beforePatch` and `afterPatch`. Each function, if provided, takes the record as its only argument. The record has all the properties fetched by default on it. Anything (including nothing) returned by the function that is not a rejected `Promise` allows the operation to proceed. If the function returns a `Promise` and it is rejected, the whole operation is immediately aborted and the promise returned by the DBO's `execute()` method is rejected with the same value. If multiple records are participating in the operation, changes saved for the records processed before the rejected one can be rolled back with the database transaction. Alternatively, instead of an object a function can be provided as the `recordValidators` argument, in which case the function is treated as the `afterPatch` function.
 
-* `filterParams` - If the DBO was created with a filter that utilizes named query parameters (`dbos.param(paramName)` function), this is the values for the parameters (object with keys for the parameter names and values for the corresponding parameter values).
+* `filterParams` - If the DBO was created with a filter that utilizes named query parameters (`dbos.param(paramName)` function), this is the values for the parameters (object with keys for the parameter names and values for the corresponding parameter values). If fetcher function was used instead of a filter, this argument is still available to the fetcher function via the DBO execution context.
 
 The returned by the `execute()` method promise, if not rejected as a result of an error, is fulfilled with an update operation result object. The result object includes:
 
