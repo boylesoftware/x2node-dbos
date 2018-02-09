@@ -28,7 +28,7 @@
   },
   "dependencies": {
     "x2node-common": "^1.3.5",
-    "x2node-patches": "^1.2.0",
+    "x2node-patches": "^1.2.1",
     "x2node-pointers": "^1.2.6",
     "x2node-records": "^2.3.0",
     "x2node-rsparser": "^2.1.8",
