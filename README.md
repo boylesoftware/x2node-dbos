@@ -2362,6 +2362,8 @@ pool.getConnection((err, connection) => {
 
 Alternatively, the application can manage transactions by itself. A transaction handler object can be retrieved from the DBO factory using its `newTransaction()` method. The method takes the database driver-specific connection object as its only argument. The returned transaction handler object exposes the following properties and methods:
 
+* `id` - A string that uniquely identifies the transaction within the process.
+
 * `connection` - The database connection object passed in to the `newTransaction()` method.
 
 * `dbDriver` - The database driver associated with the DBO factory used to create the transaction.
