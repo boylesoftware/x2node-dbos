@@ -12,7 +12,8 @@
  *
  * @function module:x2node-dbos.RecordCollectionsMonitor#collectionsUpdated
  * @param {module:x2node-dbos~DBOExecutionContext} ctx DBO execution context.
- * @param {Set.<string>} recordTypeNames Names of updated record types.
+ * @param {(Array.<string>|Set.<string>)} recordTypeNames Names of updated record
+ * types. Allowed to be <code>null</code>, <code>undefined</code> or empty.
  * @returns {Promise} If a <code>Promise</code> is returned, the transaction is
  * not committed until the promise is fulfilled. If the promise is rejected, the
  * whole transaction gets rolled back. Any other type of returned value is
@@ -23,7 +24,8 @@
  *
  * @function module:x2node-dbos.RecordCollectionsMonitor#getCollectionsVersion
  * @param {module:x2node-dbos~Transaction} tx The transaction.
- * @param {Set.<string>} recordTypeNames Names of the record types to include.
+ * @param {(string|Array.<string>|Iterable.<string>)} recordTypeNames Names of
+ * the record types to include.
  * @param {string} [lockType] If provided, the collections are locked until the
  * end of the transaction. The value can be either "shared" or "exclusive".
  * @returns {Promise.<Object>} Promise of the result object. The result object
@@ -31,4 +33,19 @@
  * representing the last modification timestamp of the records collection among
  * the requested ones that was modified most recently, and <code>version</code>,
  * which is a number that is a sum of all requested record collection versions.
+ */
+/**
+ * Lock record collection(s) for the transaction. This is similar to
+ * {@link module:x2node-dbos.RecordCollectionsMonitor#getCollectionsVersion} with
+ * a <code>lockType</code> argument, but may be a little more lightweight as it
+ * does not require to fetch any collection version data.
+ *
+ * @function module:x2node-dbos.RecordCollectionsMonitor#lockCollections
+ * @param {module:x2node-dbos~Transaction} tx The transaction.
+ * @param {(string|Array.<string>|Iterable.<string>)} recordTypeNames Names of
+ * the record types to lock.
+ * @param {string} lockType The lock type, which can be either "shared" or
+ * "exclusive".
+ * @returns {Promise.<Object>} Promise that is fulfilled after the lock is
+ * placed.
  */
