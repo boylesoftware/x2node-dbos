@@ -2364,6 +2364,8 @@ Alternatively, the application can manage transactions by itself. A transaction 
 
 * `id` - A string that uniquely identifies the transaction within the process.
 
+* `startedOn` - Timestamps, instance of `Date`, when the transaction was started. Available only after the promise returned by `start()` method successfully fulfills.
+
 * `connection` - The database connection object passed in to the `newTransaction()` method.
 
 * `dbDriver` - The database driver associated with the DBO factory used to create the transaction.
