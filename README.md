@@ -2360,27 +2360,7 @@ pool.getConnection((err, connection) => {
 });
 ```
 
-Alternatively, the application can manage transactions by itself. A transaction handler object can be retrieved from the DBO factory using its `newTransaction()` method. The method takes the database driver-specific connection object as its only argument. The returned transaction handler object exposes the following properties and methods:
-
-* `id` - A string that uniquely identifies the transaction within the process.
-
-* `startedOn` - Timestamps, instance of `Date`, when the transaction was started. Available only after the promise returned by `start()` method successfully fulfills.
-
-* `connection` - The database connection object passed in to the `newTransaction()` method.
-
-* `dbDriver` - The database driver associated with the DBO factory used to create the transaction.
-
-* `start([passThrough])` - Start the transaction. The `newTransaction()` method creates a transaction handler, but it does not start the transaction. The application must do it using the `start()` method before it passes the transaction handler object to the DBO to be used. The `start()` method returns a `Promise` which, if the transaction has been successfully initiated, is fulfilled with the optional `passThrough` argument, or is rejected with an error if the transaction could not be started. After the transaction is started and before it is committed or rolled back it is considered _active_.
-
-* `commit([passThrough])` - Commit an active transaction. The method returns a `Promise`, which fulfills with the optional `passThrough` argument if the transaction is successfully committed, or rejected with an error if the transaction could not be committed.
-
-* `rollback([passThrough])` - Rollback an active transaction. The method returns a `Promise`, which fulfills with the optional `passThrough` argument if the transaction is successfully rolled back, or rejected with an error if the transaction could not be rolled back.
-
-* `rollbackAndReject([passThrough])` - Same as `rollback()`, but the returned promise is always rejected (with the pass-through value) whether the transaction was rolled back successfully or not.
-
-* `isActive()` - Returns `true` if the transaction has been started but not yet committed or rolled back.
-
-An _active_ transaction handler can be passed in to any DBO's `execute()` method as the first argument instead of the database connection:
+Alternatively, especially if transaction involves executing multiple DBOs, the application can use a transaction factory provided by the DBO factory's `createTxFactory()` method. The methos takes database connections source (see [Data Sources](#data-sources)) as its only argument and returns a reusable instance of `TxFactory` class. The `TxFactory` instance exposes a `executeTransaction()` method, which takes a callback as an argument. The method creates and starts a transaction, calls the callback passing the transaction handler to it, and then either commits the transaction or rolls it back in case of an error. For example:
 
 ```javascript
 const mysql = require('mysql');
@@ -2389,34 +2369,49 @@ const pool = mysql.createPool({
     ...
 });
 
-const dbo = dboFactory.build...
+// build our DBOs that will comprise the transaction
+const dbo1 = dboFactory.build...
+const dbo2 = dboFactory.build...
 
-pool.getConnection((err, connection) => {
+// create the standardized database connections source
+const ds = dboFactory.adaptDataSource(pool);
 
-    if (err)
-        throw err;
+// create the transaction factory
+const txFactory = dboFactory.createTxFactory(ds);
 
-    const tx = dboFactory.newTransaction(connection);
-    tx.start().then(
-        () => dbo.execute(tx, ...),
-        err => Promise.reject(err)
-    ).then(
-        result => tx.commit(result),
-        err => (tx.isActive() ? tx.rollbackAndReject(err) : Promise.reject(err))
-    ).then(
-        result => {
-            connection.release();
-            console.log('success:', result);
-        },
-        err => {
-            connection.release(err);
-            console.error('error:', err);
-        }
-    );
+// execute our DBOs in a transaction
+txFactory.executeTransaction(tx => {
+
+    return dbo1.execute(tx, ...).then(
+        () => dbo2.execute(tx, ...));
 });
 ```
 
-Note, that is a transaction is passed into a DBO and an error happens, the DBO does not rollback the transaction. It is application's responsibility to roll it back if the `Promise` returned by the DBO's `execute()` method is rejected.
+The callback passed to `executeTransaction()` method may, and usually does, return a `Promise` with the transaction result. The `executeTransaction()` method itself also returns a `Promise`, which is fulfilled with the callback result, or is rejected if the callback returns a rejected promise or throws an error. The rejection of the promise returned by the `executeTransaction()` method indicates that the transaction was rolled back. Successful fulfillment of the promise indicates that the transaction was committed.
+
+The callback passed to the `executeTransaction()` method receives a transaction handler, which is an instance of `Transaction` class and exposes the following properties and methods:
+
+* `id` - A string that uniquely identifies the transaction within the process.
+
+* `startedOn` - Timestamp, instance of `Date`, indicating when the transaction was started. (Available only after the promise returned by `start()` method successfully fulfills. See below.)
+
+* `connection` - The database connection object allocated from the data source provided to the transaction factory.
+
+* `dbDriver` - The database driver associated with the DBO factory used to create the transaction factory.
+
+* `on(eventName, listener)` - Register a transaction event listener. The `eventName` can be "begin", "commit" or "rollback". The "begin" event is not normally used by the applications as by the time the transaction callback is called the transaction is already started by the `executeTransaction()` method. The "commit" and "rollback" events, however, allow to have additional logic invoked right after the transaction commit or rollback. The listeners are invoked asynchronously using `process.nextTick()`. The values returned by the listeners are ignored. If a listener throws an error, the error is logged, but otherwise is ignored. The "rollback" event is fired regardless whether the rollback was successful or not. If it was not successful, the listener receives the rollback error as its argument.
+
+In addition to the above, the transaction state management methods are also exposed, but are not normally used by the applications as the transaction state is automatically managed by the transaction factory's `executeTransaction()` method:
+
+* `start([passThrough])` - Start the transaction. When a new transaction handler is created, the transaction is not initially started. The application must do it using the `start()` method before the transaction handler object can be used with the DBOs. The `start()` method returns a `Promise` which, if the transaction was successfully initiated, is fulfilled with the optional `passThrough` argument, or is rejected with an error if the transaction could not be started. After the transaction is started and before it is committed or rolled back it is considered _active_.
+
+* `commit([passThrough])` - Commit an active transaction. The method returns a `Promise`, which fulfills with the optional `passThrough` argument if the transaction is successfully committed, or rejected with an error if the transaction could not be committed.
+
+* `rollback([passThrough])` - Rollback an active transaction. The method returns a `Promise`, which fulfills with the optional `passThrough` argument if the transaction is successfully rolled back, or rejected with an error if the transaction could not be rolled back.
+
+* `rollbackAndReject([passThrough])` - Same as `rollback()`, but the returned promise is always rejected (with the pass-through value) whether the transaction was rolled back successfully or not.
+
+* `isActive()` - Returns `true` if the transaction has been started but not yet committed or rolled back.
 
 ## Record Collections Monitors
 
