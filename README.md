@@ -1276,6 +1276,8 @@ Where `Expr` is a regular value expression calculated in the context of the aggr
 
 The optional filter specification format will be discussed later in this manual when we talk about fetch DBO.
 
+An aggregate property can also be a map, in which case the aggregation is further subdivided and grouped by the map key. To specify the map key use `keyPropertyName` attribute in the aggregate property definition.
+
 ### Embedded Objects
 
 Properties of a scalar nested object do not have to be stored in a separate table. The nested object's properties can be stored in the columns of the main record type table and the nested object can be used simply to organize the JSON structure of the record. For example, an address on an _Account_ record could be stored in the same table:
@@ -1942,6 +1944,14 @@ Every record type automatically defines a super-aggregate called `count`, which 
                     filter: [
                         [ 'status => is', 'PENDING' ]
                     ]
+                }
+            },
+            'countByStatus': {
+                valueType: 'number{}',
+                keyPropertyName: 'status',
+                aggregate: {
+                    collection: 'records',
+                    valueExpr: 'id => count'
                 }
             },
             'totalAmount': {
