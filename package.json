@@ -27,16 +27,16 @@
     "node": ">=6.10.3"
   },
   "dependencies": {
-    "x2node-common": "^1.3.6",
-    "x2node-patches": "^1.2.3",
-    "x2node-pointers": "^1.2.7",
-    "x2node-records": "^2.3.1",
-    "x2node-rsparser": "^2.1.9",
-    "x2node-validators": "^1.4.0"
+    "x2node-common": "^1.4.2",
+    "x2node-patches": "^1.2.4",
+    "x2node-pointers": "^1.2.8",
+    "x2node-records": "^2.3.2",
+    "x2node-rsparser": "^2.1.10",
+    "x2node-validators": "^1.4.1"
   },
   "devDependencies": {
     "chai": "^4.1.2",
-    "eslint": "^4.18.2",
-    "mocha": "^5.0.4"
+    "eslint": "^4.19.1",
+    "mocha": "^5.2.0"
   }
 }
