@@ -288,7 +288,7 @@
  * @param {*} source Driver-specific database connections source.
  * @param {*} connection The connection to release.
  * @param {external:Error} [err] Optional error object if the connection is being
- * release after a database error.
+ * released after a database error, in which case the connection is destroyed.
  */
 /**
  * Start transaction on the specified database connection.
@@ -359,7 +359,8 @@
  *
  * @function module:x2node-dbos.DBDriver#selectIntoAnchorTable
  * @param {*} connection Driver-specific database connection object.
- * @param {string} anchorTableName Name for the temporary anchor table.
+ * @param {string} anchorTableName Name of the anchor table to use. Must be
+ * unique for the transaction.
  * @param {string} topTableName Name of the top table in the <code>SELECT</code>
  * query. This is the table that contains the ids.
  * @param {string} idColumnName Name of the column in <code>topTableName</code>
@@ -370,8 +371,8 @@
  * placeholder in the place of the select list.
  * @param {Object} handler The operation result handler.
  * @param {function} handler.onSuccess Function that gets called upon operation
- * success. The function receives the number of ids loaded into the anchor table
- * as its only argument.
+ * success. The function receives two arguments: the name of the anchor table and
+ * the number of ids loaded into the anchor table.
  * @param {function} handler.onError Function that gets called upon operation
  * failure. The function receives a single argument with the error object.
  * @param {function} [handler.trace] Function that gets called before the method
