@@ -18,5 +18,6 @@
  * using [getConnection()]{@link module:x2node-dbos.DataSource#getConnection}
  * method.
  * @param {external:Error} [err] Optional error object if the connection is being
- * released after a database error.
+ * released after a database error, in which case the connection is destroyed and
+ * never reused.
  */

@@ -2425,17 +2425,21 @@ In addition to the above, the transaction state management methods are also expo
 
 ## Record Collections Monitors
 
-The DBO factory exposes a method called `setRecordCollectionsMonitor()`. It associates a _record collections monitor_, provided to it as its only argument, with the DBO factory. The monitor is a special object that gets notified whenever any DBO created by the factory makes changes to any record of any record type. This allows the monitor to keep track of the complete collections of records of any given record type as a whole. For an application that exposes a RESTful API this can be usedful for generating "ETag" values for the API calls that query record recollections (e.g. record list or search). It also allows locking transactions against the whole collections (to prevent any new record additions or deletions during the transaction.
+The DBO factory exposes a method called `setRecordCollectionsMonitor()`. It associates a _record collections monitor_, provided to it as its only argument, with the DBO factory. The monitor is a special service that gets notified whenever any DBO created by the factory makes changes to any record of any record type. This allows the monitor to keep track of the complete collections of records of any given record type as a whole. For an application that exposes a RESTful API this can be usedful for generating "ETag" values for the API calls that query record recollections (e.g. record list or search). It also allows locking transactions against the whole collections (to prevent any new record additions or deletions during the transaction.
 
-The monitor object implementation the following interface:
+The monitor service implements the following interface:
 
-* `collectionsUpdated(ctx, recordTypeNames)` - This monitor method is called by every DBO during the transaction that modifies record collections. The `ctx` argument is the DBO execution context object and the `recordTypeNames` is a `Set` of strings with names of record types being modified. If the method returns a `Promise`, the transaction is not committed until the promise is fulfilled. If the promise is rejected, the whole transaction gets rolled back. Any other type of returned value is ignored and the transaction is committed.
-
-* `getCollectionsVersion(tx, recordTypeNames, [lockType])` - Queries the record collections versioning information. The `tx` argument is a transaction, the `recordTypeNames` is a `Set` of strings with names of record types to query. The optional `lockType` argument, which can be either "shared" or "exclusive", asks the monitor to lock the specified record collections until the end of the transaction. The method returns a `Promise` of the combined collections versioning information object, which includes two properties:
+* `lockCollections(tx, locks, [includeInVersion])` - Locks record collections specified in the `lock` decriptor, which has two optional properties: `shared` and `exclusive`. Each contains an `Iterable` with record types names to lock. The `tx` argument is the transaction, for the duration of which the collections remain locked. The method returns a `Promise` of the combined collections versioning information object, which includes two properties:
 
   * `version` - A number which is a sum of versions of all requested record collections. Initially, every record type gets a record collection with version 1. Whenever a new record is added or an existing record is modified or deleted, the collection version gets bumped up. The sum of multiple record collection versions produces a unique version for that particular combination of record collections.
 
   * `modifiedOn` - A `Date`, which reflects the modification timestamp of the records collection among the specified ones that was modified most recently. If no collection was ever modified, the date is going to be midnight of January 1st, 1970.
+
+  If optional `includeInVersion` argument is provided, it must an `Iterable` with record type names to include in the returned version information object. If it is not provided, all locked collections are included.
+
+* `collectionsUpdated(ctx, recordTypeNames)` - This monitor method is called by every DBO during the transaction that modifies record collections. The `ctx` argument is the DBO execution context object and the `recordTypeNames` is an `Iterable` containing names of record types that are modified. If the method returns a `Promise`, the transaction is not committed until the promise is fulfilled. If the promise is rejected, the whole transaction gets rolled back. Any other type of returned value is ignored and the transaction is committed. Any record type name used in `recordTypeNames` argument must be first exclusively locked for the transaction using monitor's `lockCollections()` method.
+
+* `lockCollectionForShare(tx, recordTypeName)` - Additional method for locking a single records collection in shared mode. Can be used in the middle of a transaction and does nothing if the collection is already locked. As opposed to the `lockCollections()` method, which is normally use in the beginning of the transaction before any other database operations are performed, does not return any version information. The returned promise is fulfilled upon lock placement or rejected in case of an error.
 
 ## Data Sources
 

@@ -287,8 +287,7 @@
  * @function module:x2node-dbos.DBDriver#releaseConnection
  * @param {*} source Driver-specific database connections source.
  * @param {*} connection The connection to release.
- * @param {external:Error} [err] Optional error object if the connection is being
- * release after a database error.
+ * @param {*} [err] If truthy value, the connection is destroyed.
  */
 /**
  * Start transaction on the specified database connection.
@@ -433,16 +432,22 @@
  * Create special table used to track versions if it does not exist yet. The
  * table has three columns: <code>name</code> (varchar 64, primary key),
  * <code>modified_on</code> (timestamp) and <code>version</code>
- * (unsigned integer).
+ * (unsigned integer). Also make sure that the table contains rows for every item
+ * name. The method creates and populates the table using correct locking so that
+ * multiple instances can be attempting to do it concurrently.
  *
  * @function module:x2node-dbos.DBDriver#createVersionTableIfNotExists
  * @param {*} connection Driver-specific database connection object.
  * @param {string} tableName Table name.
+ * @param {Iterable.<string>} itemNames Item names to make sure are represented
+ * in the table.
  * @param {Object} handler The operation result handler.
  * @param {function} handler.onSuccess Function that gets called upon operation
  * success.
  * @param {function} handler.onError Function that gets called upon operation
- * failure. The function receives a single argument with the error object.
+ * failure. The function receives a single argument with the error object. The
+ * handler must ensure that the database connection is destroyed if the error is
+ * reported.
  * @param {function} [handler.trace] Function that gets called before the method
  * sends a SQL command to the database. The command SQL is passed to the function
  * as its only argument.
