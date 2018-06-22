@@ -32,7 +32,7 @@
     "x2node-pointers": "^1.2.9",
     "x2node-records": "^2.4.0",
     "x2node-rsparser": "^2.1.11",
-    "x2node-validators": "^1.4.2"
+    "x2node-validators": "^1.5.0"
   },
   "devDependencies": {
     "chai": "^4.1.2",
