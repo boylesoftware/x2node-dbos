@@ -2425,9 +2425,9 @@ In addition to the above, the transaction state management methods are also expo
 
 ## Record Collections Monitors
 
-The DBO factory exposes a method called `setRecordCollectionsMonitor()`. It associates a _record collections monitor_, provided to it as its only argument, with the DBO factory. The monitor is a special object that gets notified whenever any DBO created by the factory makes changes to any record of any record type. This allows the monitor to keep track of the complete collections of records of any given record type as a whole. For an application that exposes a RESTful API this can be usedful for generating "ETag" values for the API calls that query record recollections (e.g. record list or search). It also allows locking transactions against the whole collections (to prevent any new record additions or deletions during the transaction.
+The DBO factory exposes a method called `setRecordCollectionsMonitor()`. It associates a _record collections monitor_, provided to it as its only argument, with the DBO factory. The monitor is a special service that gets notified whenever any DBO created by the factory makes changes to any record of any record type. This allows the monitor to keep track of the complete collections of records of any given record type as a whole. For an application that exposes a RESTful API this can be usedful for generating "ETag" values for the API calls that query record recollections (e.g. record list or search). It also allows locking transactions against the whole collections to provide reliable transaction isolation and avoid conflicts and deadlocks.
 
-The monitor object implementation the following interface:
+The monitor service implementation the following interface:
 
 * `collectionsUpdated(ctx, recordTypeNames)` - This monitor method is called by every DBO during the transaction that modifies record collections. The `ctx` argument is the DBO execution context object and the `recordTypeNames` is a `Set` of strings with names of record types being modified. If the method returns a `Promise`, the transaction is not committed until the promise is fulfilled. If the promise is rejected, the whole transaction gets rolled back. Any other type of returned value is ignored and the transaction is committed.
 
