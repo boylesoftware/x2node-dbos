@@ -217,7 +217,15 @@ const dboFactory = dbos.createDBOFactory(recordTypes, 'mysql');
 
 The DBO factory is provided with the record types library and the database driver, so that it knows how to construct database engine-specific SQL. Out-of-the-box the module supports [mysql](https://www.npmjs.com/package/mysql) (and other compatible implementations) and [pg](https://www.npmjs.com/package/pg). Custom driver implementations can be provided to the DBO factory as well.
 
-The `createDBOFactory()` function can also take a third argument, `options`, which is an object passed directly to the database driver implementation. The built-in _PostgreSQL_ driver does not take any options. The built-in _MySQL_ driver, however, can take a Boolean `mariaDB` option, which, if set and is `true`, will force _MariaDB_ specific logic in the driver (there are some incompatibilities between _MySQL_ and _MariaDB_, which the driver has to work around). If the option is not provided, the driver will make an attempt to detect if it's connected to _MariaDB_ by analyzing the handshake packet. If the driver cannot determine the underlying database kind, it defaults to the _MySQL_ logic.
+The `createDBOFactory()` function can also take a third argument, `options`, which is an object passed directly to the database driver implementation.
+
+The built-in _PostgreSQL_ driver does not take any options.
+
+The built-in _MySQL_ driver, however, can take the following options:
+
+* `orderMode` - There is a difference how some versions of _MariaDB_ (pre version 10.1.35) and _MySQL_ apply sorting to the results of SQL queries. _MySQL_ and newer versions of _MariaDB_ may apply sorting _after_ the result set rows are generated, including any variable calculations. That means that if the row includes a row counter that is incremented for each row, the counter will be calculated _before_ the sorting is applied. This is as opposed to older versions of _MariaDB_ that _always_ apply sorting _before_ row variables are calculated. Because of these differences, the driver may decide to construct the SQL queries differently. By default, the query without a counter but with the `ORDER BY` clause is created and is used as a subquery for the outer query that includes the row counter. This corresponds to _MySQL_ and newer versions of _MariaDB_. If `orderMode` option is "pre", no subquery is used and both the row counter and the `ORDER BY` clause are included in a single one-level query. If `orderMode` is "preIfMariaDB", the driver detects if it runs against a _MariaDB_ database and automatically uses the "pre" mode if so.
+
+* `mariaDB` - This is a deprecated option replaced by `orderMode`. If `true` (Boolean), the "pre" mode is forced.
 
 Normally, a factory is created once by the application when it starts up and is used to construct DBOs throughout the application's lifecycle.
 
