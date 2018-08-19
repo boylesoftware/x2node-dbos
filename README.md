@@ -2212,7 +2212,7 @@ Using property paths in dot notation allows constructing complex tests that invo
 
 #### Collection Tests
 
-All tests in the paragraph above test scalar values. Another class of tests is _collection property tests_. The predicate is a path to a collection (array or map) property. No value transformation functions or any other value calculation expressions are involved as they do not apply to collections. The only two tests allowed are `empty` and `!empty`, which is the default if no test is specified. And the test as a whole just tests if the specified collection has elements or if it is empty. For example, to select only those _Account_ records that have some _Order_ records associated with them, the filter could be:
+All tests in the paragraph above test scalar values. Another class of tests is _collection property tests_. The predicate is a path to a collection (array or map) property. No value transformation functions or any other value calculation expressions are involved as they do not apply to collections. The only tests allowed are `empty` and `!empty`, which is the default if no test is specified, and `count` and `!count`. The test as a whole tests if the specified collection has elements or is empty, or has specified number of elements, or not. For example, to select only those _Account_ records that have some _Order_ records associated with them, the filter could be:
 
 ```javascript
 filter = [
@@ -2230,6 +2230,18 @@ filter = [
     ]]
 ];
 ```
+
+To select account that have exactly two orders for a given date:
+
+```javascript
+filter = [
+    [ 'orderRefs => count', 2, [
+        [ 'deliveryDate', '2017-10-12' ]
+    ]]
+];
+```
+
+Note, that the `count` (and `!count`) tests require an integer argument.
 
 For the property paths, the nested collection filter assumes the context of the collection elements, so properties `status` and `placedOn` in the example above belong to the _Order_ records (in the context of the fetched record type, the _Account_ in our case, they would be `orderRefs.status` and `orderRefs.placedOn` and would be not allowed).
 
