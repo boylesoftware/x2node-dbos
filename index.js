@@ -604,15 +604,29 @@ exports.extendPropertyDescriptor = function(ctx, propDesc) {
 				if (!propDesc.keyPropertyName)
 					throw invalidPropDef(
 						propDesc, 'missing keyPropertyName attribute.');
-				const container = valueExprCtx.baseContainer;
-				if (!container.hasProperty(propDesc.keyPropertyName))
-					throw invalidPropDef(
-						propDesc, 'invalid keyPropertyName attribute:' +
-							' no such property.');
-				const keyPropDesc = container.getPropertyDesc(
-					propDesc.keyPropertyName);
-				if (!keyPropDesc.isScalar() || keyPropDesc.isCalculated() ||
-					keyPropDesc.table || keyPropDesc.reverseRefPropertyName ||
+				const keyPropNameParts = propDesc.keyPropertyName.split('.');
+				let container = valueExprCtx.baseContainer;
+				let keyPropDesc;
+				for (let propName of keyPropNameParts) {
+					if (!container)
+						throw invalidPropDef(
+							propDesc, 'key property path ' +
+								propDesc.keyPropertyName +
+								' includes elements without nested properties.');
+					if (!container.hasProperty(propName))
+						throw invalidPropDef(
+							propDesc, 'invalid keyPropertyName attribute:' +
+								' no such property.');
+					keyPropDesc = container.getPropertyDesc(propName);
+					if (!keyPropDesc.isScalar() || keyPropDesc.isCalculated() ||
+						keyPropDesc.reverseRefPropertyName)
+						throw invalidPropDef(
+							propDesc, 'key property ' +
+								propDesc.keyPropertyName +
+								' is not scalar, calculated or dependent.');
+					container = keyPropDesc.nestedProperties;
+				}
+				if (keyPropDesc.table ||
 					(keyPropDesc.scalarValueType === 'object'))
 					throw invalidPropDef(
 						propDesc, 'key property ' + propDesc.keyPropertyName +
