@@ -412,7 +412,7 @@ To create a new order record we could use the following code:
 // create the DBO and pass new order record template to it
 const insertDBO = dboFactory.buildInsert('Order', {
     accountRef: 'Account#10',
-    placedOn: (new Date()).toISOString(),
+    placedOn: new Date(),
     status: 'PENDING',
     items: [
         {
