@@ -227,6 +227,10 @@ The built-in _MySQL_ driver, however, can take the following options:
 
 * `mariaDB` - This is a deprecated option replaced by `orderMode`. If `true` (Boolean), the "pre" mode is forced.
 
+* `databaseCharacterSet` - The database character set. Used, for example, for case conversion in case-insensitive tests. Defaults to "utf8".
+
+* `useLocalTimezone` - When `true`, the driver will assume that the database is running in the same timezone as the application. By default, the database is expected to run in UTC timezone.
+
 Normally, a factory is created once by the application when it starts up and is used to construct DBOs throughout the application's lifecycle.
 
 The DBO factory can be used to construct four types of DBOs:
